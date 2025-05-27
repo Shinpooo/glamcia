@@ -142,12 +142,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Floating Action Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <div 
-          ref={menuRef}
-          className="relative group"
-          onMouseEnter={() => window.innerWidth >= 1024 && setIsMenuOpen(true)}
-          onMouseLeave={() => window.innerWidth >= 1024 && setIsMenuOpen(false)}
-        >
+        <div ref={menuRef} className="relative">
           {/* Quick Actions Menu */}
           {isMenuOpen && (
             <div className="absolute bottom-16 right-0 mb-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
