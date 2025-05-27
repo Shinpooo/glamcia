@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Euro, 
@@ -11,9 +11,12 @@ import {
   Clock,
   Star,
   BarChart3,
-  Minus
+  Minus,
+  Award,
+  Activity,
+  TrendingDown
 } from 'lucide-react';
-import { getCombinedDailyStats, getTotalRevenue, getRevenueByMonth, getTotalExpenses, getExpensesByMonth } from '../utils/storage';
+import { getCombinedDailyStats, getRevenueByMonth, getExpensesByMonth, loadPrestations } from '../utils/storage';
 import { CombinedDailyStats } from '../utils/storage';
 import Modal from '../components/Modal';
 import PrestationForm from '../components/PrestationForm';
@@ -22,10 +25,12 @@ import TimeChart from '../components/WeeklyChart';
 
 const Dashboard: React.FC = () => {
   const [dailyStats, setDailyStats] = useState<CombinedDailyStats[]>([]);
-  const [totalRevenue, setTotalRevenue] = useState<number>(0);
-  const [totalExpenses, setTotalExpenses] = useState<number>(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState<{ [month: string]: number }>({});
   const [monthlyExpenses, setMonthlyExpenses] = useState<{ [month: string]: number }>({});
+  const [weeklyPrestations, setWeeklyPrestations] = useState<number>(0);
+  const [currentMonthPrestations, setCurrentMonthPrestations] = useState<number>(0);
+  const [lastMonthPrestations, setLastMonthPrestations] = useState<number>(0);
+  const [topServiceThisMonth, setTopServiceThisMonth] = useState<{ name: string; revenue: number; count: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPrestationModalOpen, setIsPrestationModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -33,16 +38,60 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const loadData = () => {
       const stats = getCombinedDailyStats();
-      const total = getTotalRevenue();
-      const totalExp = getTotalExpenses();
       const monthly = getRevenueByMonth();
       const monthlyExp = getExpensesByMonth();
+      const prestations = loadPrestations();
+      
+      // Calculate new metrics
+      const now = new Date();
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      const lastMonthStart = startOfMonth(subMonths(now, 1));
+      const lastMonthEnd = endOfMonth(subMonths(now, 1));
+      
+      // Prestations this week
+      const thisWeekPrestations = prestations.filter(p => {
+        const prestationDate = parseISO(p.date);
+        return isWithinInterval(prestationDate, { start: weekStart, end: weekEnd });
+      }).length;
+      
+      // Prestations this month vs last month
+      const thisMonthPrestations = prestations.filter(p => {
+        const prestationDate = parseISO(p.date);
+        return isWithinInterval(prestationDate, { start: monthStart, end: monthEnd });
+      });
+      
+      const lastMonthPrestationsData = prestations.filter(p => {
+        const prestationDate = parseISO(p.date);
+        return isWithinInterval(prestationDate, { start: lastMonthStart, end: lastMonthEnd });
+      });
+      
+      // Top service this month
+      const serviceRevenue: { [key: string]: { revenue: number; count: number } } = {};
+      thisMonthPrestations.forEach(p => {
+        if (!serviceRevenue[p.serviceName]) {
+          serviceRevenue[p.serviceName] = { revenue: 0, count: 0 };
+        }
+        serviceRevenue[p.serviceName].revenue += p.price;
+        serviceRevenue[p.serviceName].count += 1;
+      });
+      
+      const topService = Object.entries(serviceRevenue).reduce((top, [name, data]) => {
+        if (!top || data.revenue > top.revenue) {
+          return { name, revenue: data.revenue, count: data.count };
+        }
+        return top;
+      }, null as { name: string; revenue: number; count: number } | null);
       
       setDailyStats(stats);
-      setTotalRevenue(total);
-      setTotalExpenses(totalExp);
       setMonthlyRevenue(monthly);
       setMonthlyExpenses(monthlyExp);
+      setWeeklyPrestations(thisWeekPrestations);
+      setCurrentMonthPrestations(thisMonthPrestations.length);
+      setLastMonthPrestations(lastMonthPrestationsData.length);
+      setTopServiceThisMonth(topService);
       setIsLoading(false);
     };
 
@@ -52,7 +101,6 @@ const Dashboard: React.FC = () => {
   const currentMonth = format(new Date(), 'yyyy-MM');
   const currentMonthRevenue = monthlyRevenue[currentMonth] || 0;
   const currentMonthExpenses = monthlyExpenses[currentMonth] || 0;
-  const netProfit = totalRevenue - totalExpenses;
   const currentMonthProfit = currentMonthRevenue - currentMonthExpenses;
   const recentStats = dailyStats.slice(0, 5);
 
@@ -60,32 +108,114 @@ const Dashboard: React.FC = () => {
     setIsPrestationModalOpen(false);
     // Reload data
     const stats = getCombinedDailyStats();
-    const total = getTotalRevenue();
-    const totalExp = getTotalExpenses();
     const monthly = getRevenueByMonth();
     const monthlyExp = getExpensesByMonth();
+    const prestations = loadPrestations();
+    
+    // Recalculate new metrics
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    
+    const thisWeekPrestations = prestations.filter(p => {
+      const prestationDate = parseISO(p.date);
+      return isWithinInterval(prestationDate, { start: weekStart, end: weekEnd });
+    }).length;
+    
+    const thisMonthPrestations = prestations.filter(p => {
+      const prestationDate = parseISO(p.date);
+      return isWithinInterval(prestationDate, { start: monthStart, end: monthEnd });
+    });
+    
+    const lastMonthPrestationsData = prestations.filter(p => {
+      const prestationDate = parseISO(p.date);
+      return isWithinInterval(prestationDate, { start: lastMonthStart, end: lastMonthEnd });
+    });
+    
+    const serviceRevenue: { [key: string]: { revenue: number; count: number } } = {};
+    thisMonthPrestations.forEach(p => {
+      if (!serviceRevenue[p.serviceName]) {
+        serviceRevenue[p.serviceName] = { revenue: 0, count: 0 };
+      }
+      serviceRevenue[p.serviceName].revenue += p.price;
+      serviceRevenue[p.serviceName].count += 1;
+    });
+    
+    const topService = Object.entries(serviceRevenue).reduce((top, [name, data]) => {
+      if (!top || data.revenue > top.revenue) {
+        return { name, revenue: data.revenue, count: data.count };
+      }
+      return top;
+    }, null as { name: string; revenue: number; count: number } | null);
     
     setDailyStats(stats);
-    setTotalRevenue(total);
-    setTotalExpenses(totalExp);
     setMonthlyRevenue(monthly);
     setMonthlyExpenses(monthlyExp);
+    setWeeklyPrestations(thisWeekPrestations);
+    setCurrentMonthPrestations(thisMonthPrestations.length);
+    setLastMonthPrestations(lastMonthPrestationsData.length);
+    setTopServiceThisMonth(topService);
   };
 
   const handleExpenseSuccess = () => {
     setIsExpenseModalOpen(false);
     // Reload data
     const stats = getCombinedDailyStats();
-    const total = getTotalRevenue();
-    const totalExp = getTotalExpenses();
     const monthly = getRevenueByMonth();
     const monthlyExp = getExpensesByMonth();
+    const prestations = loadPrestations();
+    
+    // Recalculate new metrics
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    
+    const thisWeekPrestations = prestations.filter(p => {
+      const prestationDate = parseISO(p.date);
+      return isWithinInterval(prestationDate, { start: weekStart, end: weekEnd });
+    }).length;
+    
+    const thisMonthPrestations = prestations.filter(p => {
+      const prestationDate = parseISO(p.date);
+      return isWithinInterval(prestationDate, { start: monthStart, end: monthEnd });
+    });
+    
+    const lastMonthPrestationsData = prestations.filter(p => {
+      const prestationDate = parseISO(p.date);
+      return isWithinInterval(prestationDate, { start: lastMonthStart, end: lastMonthEnd });
+    });
+    
+    const serviceRevenue: { [key: string]: { revenue: number; count: number } } = {};
+    thisMonthPrestations.forEach(p => {
+      if (!serviceRevenue[p.serviceName]) {
+        serviceRevenue[p.serviceName] = { revenue: 0, count: 0 };
+      }
+      serviceRevenue[p.serviceName].revenue += p.price;
+      serviceRevenue[p.serviceName].count += 1;
+    });
+    
+    const topService = Object.entries(serviceRevenue).reduce((top, [name, data]) => {
+      if (!top || data.revenue > top.revenue) {
+        return { name, revenue: data.revenue, count: data.count };
+      }
+      return top;
+    }, null as { name: string; revenue: number; count: number } | null);
     
     setDailyStats(stats);
-    setTotalRevenue(total);
-    setTotalExpenses(totalExp);
     setMonthlyRevenue(monthly);
     setMonthlyExpenses(monthlyExp);
+    setWeeklyPrestations(thisWeekPrestations);
+    setCurrentMonthPrestations(thisMonthPrestations.length);
+    setLastMonthPrestations(lastMonthPrestationsData.length);
+    setTopServiceThisMonth(topService);
   };
 
   if (isLoading) {
@@ -114,67 +244,117 @@ const Dashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Revenus Card */}
+        {/* Prestations cette semaine */}
         <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl group-hover:scale-110 transition-transform">
-              <TrendingUp className="h-6 w-6 text-green-600" />
+            <div className="p-3 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Activity className="h-6 w-6 text-purple-600" />
             </div>
             <div className="text-right">
-              <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Revenus</p>
-              <p className="text-2xl font-bold text-green-700">{totalRevenue}€</p>
+              <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">Cette Semaine</p>
+              <p className="text-2xl font-bold text-purple-700">{weeklyPrestations}</p>
             </div>
           </div>
-
-        </div>
-
-        {/* Dépenses Card */}
-        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-red-100 to-rose-100 rounded-xl group-hover:scale-110 transition-transform">
-              <TrendingUp className="h-6 w-6 text-red-600 rotate-180" />
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Dépenses</p>
-              <p className="text-2xl font-bold text-red-700">{totalExpenses}€</p>
-            </div>
+          <div className="text-xs text-gray-500">
+            <span>Prestations réalisées</span>
           </div>
-
         </div>
 
-        {/* Bénéfice Net Card */}
-        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between mb-4">
-            <div className={`p-3 rounded-xl group-hover:scale-110 transition-transform ${
-              netProfit >= 0 
-                ? 'bg-gradient-to-br from-emerald-100 to-green-100' 
-                : 'bg-gradient-to-br from-red-100 to-rose-100'
-            }`}>
-              <Euro className={`h-6 w-6 ${netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
-            </div>
-            <div className="text-right">
-              <p className={`text-xs font-medium uppercase tracking-wide ${
-                netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
-              }`}>Bénéfice Net</p>
-              <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                {netProfit >= 0 ? '+' : ''}{netProfit}€
-              </p>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Ce Mois Card */}
+        {/* Évolution du nombre de prestations */}
         <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl group-hover:scale-110 transition-transform">
-              <Calendar className="h-6 w-6 text-blue-600" />
+              {currentMonthPrestations >= lastMonthPrestations ? (
+                <TrendingUp className="h-6 w-6 text-blue-600" />
+              ) : (
+                <TrendingDown className="h-6 w-6 text-blue-600" />
+              )}
             </div>
             <div className="text-right">
-              <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Ce Mois</p>
-              <p className={`text-2xl font-bold ${currentMonthProfit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
-                {currentMonthProfit >= 0 ? '+' : ''}{currentMonthProfit}€
+              <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Activité Mensuelle</p>
+              <p className="text-2xl font-bold text-blue-700">{currentMonthPrestations}</p>
+            </div>
+          </div>
+          <div className="text-xs text-gray-500 space-y-1">
+            <div className="text-center mb-2">
+              <span className="font-medium text-gray-700">Évolution des prestations</span>
+            </div>
+            <div className="flex justify-between">
+              <span>{format(new Date(), 'MMMM', { locale: fr })}:</span>
+              <span className="font-medium">{currentMonthPrestations} prestations</span>
+            </div>
+            <div className="flex justify-between">
+              <span>{format(subMonths(new Date(), 1), 'MMMM', { locale: fr })}:</span>
+              <span className="font-medium">{lastMonthPrestations} prestations</span>
+            </div>
+            {lastMonthPrestations > 0 ? (
+              <div className="flex justify-between pt-2 border-t border-gray-200">
+                <span className="font-medium">Tendance:</span>
+                <div className="flex items-center space-x-1">
+                  {currentMonthPrestations >= lastMonthPrestations ? (
+                    <TrendingUp className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 text-red-600" />
+                  )}
+                  <span className={`font-bold ${
+                    currentMonthPrestations >= lastMonthPrestations ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {currentMonthPrestations >= lastMonthPrestations ? '+' : ''}
+                    {((currentMonthPrestations - lastMonthPrestations) / lastMonthPrestations * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-gray-200 text-center">
+                <span className="text-gray-400 italic">Premier mois d&apos;activité</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Activité la plus rentable ce mois */}
+        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Award className="h-6 w-6 text-amber-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Top Service</p>
+              <p className="text-2xl font-bold text-amber-700">
+                {topServiceThisMonth ? `${topServiceThisMonth.revenue}€` : '0€'}
               </p>
+            </div>
+          </div>
+          <div className="text-xs text-gray-500">
+            {topServiceThisMonth ? (
+              <div className="space-y-1">
+                <div className="font-medium text-gray-700 truncate">
+                  {topServiceThisMonth.name}
+                </div>
+                <div className="flex justify-between">
+                  <span>Prestations:</span>
+                  <span className="font-medium">{topServiceThisMonth.count}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Moyenne:</span>
+                  <span className="font-medium">{Math.round(topServiceThisMonth.revenue / topServiceThisMonth.count)}€</span>
+                </div>
+              </div>
+            ) : (
+              <span>Aucune prestation ce mois</span>
+            )}
+          </div>
+        </div>
+
+        {/* Revenus du mois actuel */}
+        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Euro className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Ce Mois</p>
+              <p className="text-2xl font-bold text-green-700">+{currentMonthRevenue}€</p>
             </div>
           </div>
           <div className="text-xs text-gray-500 space-y-1">
@@ -185,6 +365,12 @@ const Dashboard: React.FC = () => {
             <div className="flex justify-between">
               <span>Dépenses:</span>
               <span className="text-red-600 font-medium">-{currentMonthExpenses}€</span>
+            </div>
+            <div className="flex justify-between pt-1 border-t border-gray-200">
+              <span>Net:</span>
+              <span className={`font-medium ${currentMonthProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {currentMonthProfit >= 0 ? '+' : ''}{currentMonthProfit}€
+              </span>
             </div>
           </div>
         </div>
