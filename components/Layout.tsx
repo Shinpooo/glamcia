@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Calendar, Plus, BarChart3, History, Sparkles, Minus } from 'lucide-react';
+import { Calendar, Plus, BarChart3, History, Sparkles, Minus, X } from 'lucide-react';
 import Modal from './Modal';
 import PrestationForm from './PrestationForm';
 import ExpenseForm from './ExpenseForm';
@@ -14,6 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
   const [isPrestationModalOpen, setIsPrestationModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigation = [
     { name: 'Tableau de bord', href: '/', icon: BarChart3 },
@@ -27,14 +28,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handlePrestationSuccess = () => {
     setIsPrestationModalOpen(false);
+    setIsMenuOpen(false);
     // Refresh the page to show updated data
     router.reload();
   };
 
   const handleExpenseSuccess = () => {
     setIsExpenseModalOpen(false);
+    setIsMenuOpen(false);
     // Refresh the page to show updated data
     router.reload();
+  };
+
+  const handlePrestationClick = () => {
+    setIsMenuOpen(false);
+    setIsPrestationModalOpen(true);
+  };
+
+  const handleExpenseClick = () => {
+    setIsMenuOpen(false);
+    setIsExpenseModalOpen(true);
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
 
   return (
@@ -107,34 +124,45 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Floating Action Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <div className="relative group">
-          <button className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-            <Plus className="h-6 w-6" />
-          </button>
-          
+        <div className="relative">
           {/* Quick Actions Menu */}
-          <div className="absolute bottom-16 right-0 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-2 min-w-[200px]">
-              <button
-                onClick={() => setIsPrestationModalOpen(true)}
-                className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-700 rounded-lg transition-colors w-full text-left"
-              >
-                <div className="p-2 bg-pink-100 rounded-lg">
-                  <Plus className="h-4 w-4 text-pink-600" />
-                </div>
-                <span className="font-medium">Nouvelle Prestation</span>
-              </button>
-              <button
-                onClick={() => setIsExpenseModalOpen(true)}
-                className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-lg transition-colors w-full text-left"
-              >
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Minus className="h-4 w-4 text-orange-600" />
-                </div>
-                <span className="font-medium">Nouvelle Dépense</span>
-              </button>
+          {isMenuOpen && (
+            <div className="absolute bottom-16 right-0 mb-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
+              <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-2 min-w-[200px]">
+                <button
+                  onClick={handlePrestationClick}
+                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-700 rounded-lg transition-colors w-full text-left"
+                >
+                  <div className="p-2 bg-pink-100 rounded-lg">
+                    <Plus className="h-4 w-4 text-pink-600" />
+                  </div>
+                  <span className="font-medium">Nouvelle Prestation</span>
+                </button>
+                <button
+                  onClick={handleExpenseClick}
+                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-lg transition-colors w-full text-left"
+                >
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Minus className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <span className="font-medium">Nouvelle Dépense</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          
+          <button 
+            onClick={toggleMenu}
+            className={`bg-gradient-to-r from-pink-500 to-purple-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 ${
+              isMenuOpen ? 'rotate-45' : ''
+            }`}
+          >
+            {isMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Plus className="h-6 w-6" />
+            )}
+          </button>
         </div>
       </div>
 
