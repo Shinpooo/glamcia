@@ -163,7 +163,7 @@ const CalendarPage: React.FC = () => {
             <div className="grid grid-cols-7 gap-1">
               {/* Empty cells for days before month start */}
               {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, index) => (
-                <div key={`empty-${index}`} className="p-1 sm:p-2 h-16 sm:h-20 md:h-24"></div>
+                <div key={`empty-${index}`} className="p-1 sm:p-2 h-20 sm:h-20 md:h-24"></div>
               ))}
               
               {/* Days of the month */}
@@ -176,7 +176,7 @@ const CalendarPage: React.FC = () => {
                   <button
                     key={date.toISOString()}
                     onClick={() => handleDateClick(date)}
-                    className={`p-1 sm:p-2 h-16 sm:h-20 md:h-24 border rounded-lg text-left transition-all hover:shadow-sm ${
+                    className={`p-1 sm:p-2 h-20 sm:h-20 md:h-24 border rounded-lg text-left transition-all hover:shadow-sm overflow-hidden ${
                       isSelected
                         ? 'border-pink-500 bg-pink-50'
                         : isToday
@@ -190,25 +190,47 @@ const CalendarPage: React.FC = () => {
                       {format(date, 'd')}
                     </div>
                     {dayStats && (
-                      <div className="space-y-0.5">
-                        {/* Mobile: Show abbreviated info */}
-                        <div className="sm:hidden">
-                          {dayStats.totalRevenue > 0 && (
-                            <div className="text-[10px] text-green-600 font-medium leading-tight">
-                              +{dayStats.totalRevenue}€
+                      <div className="flex flex-col h-full justify-between">
+                        {/* Mobile: Show optimized compact info */}
+                        <div className="sm:hidden flex-1 flex flex-col justify-center space-y-0.5">
+                          {/* Si les deux existent, afficher seulement le net avec indicateurs visuels */}
+                          {dayStats.totalRevenue > 0 && dayStats.totalExpenses > 0 ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex space-x-1">
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                                </div>
+                                <div className={`text-[9px] font-bold ${
+                                  dayStats.netProfit >= 0 ? 'text-green-700' : 'text-red-700'
+                                }`}>
+                                  {dayStats.netProfit >= 0 ? '+' : ''}{dayStats.netProfit}€
+                                </div>
+                              </div>
+                              <div className="text-[8px] text-gray-500 text-center leading-tight">
+                                {dayStats.prestationCount + dayStats.expenseCount} op.
+                              </div>
+                            </div>
+                          ) : (
+                            /* Si seulement revenus ou dépenses */
+                            <div className="space-y-0.5">
+                              {dayStats.totalRevenue > 0 && (
+                                <div className="text-[9px] text-green-600 font-bold leading-tight">
+                                  +{dayStats.totalRevenue}€
+                                </div>
+                              )}
+                              {dayStats.totalExpenses > 0 && (
+                                <div className="text-[9px] text-red-600 font-bold leading-tight">
+                                  -{dayStats.totalExpenses}€
+                                </div>
+                              )}
+                              <div className="text-[8px] text-gray-500 text-center leading-tight">
+                                {dayStats.prestationCount + dayStats.expenseCount} op.
+                              </div>
                             </div>
                           )}
-                          {dayStats.totalExpenses > 0 && (
-                            <div className="text-[10px] text-red-600 font-medium leading-tight">
-                              -{dayStats.totalExpenses}€
-                            </div>
-                          )}
-                          <div className={`text-[10px] font-medium leading-tight ${
-                            dayStats.netProfit >= 0 ? 'text-green-700' : 'text-red-700'
-                          }`}>
-                            Net: {dayStats.netProfit}€
-                          </div>
                         </div>
+                        
                         {/* Desktop: Show full info */}
                         <div className="hidden sm:block space-y-1">
                           {dayStats.totalRevenue > 0 && (

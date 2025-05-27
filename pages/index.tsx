@@ -266,49 +266,124 @@ const Dashboard: React.FC = () => {
       {/* Time Chart */}
       <TimeChart />
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <h2 className="text-xl font-bold text-gray-900">Activité Récente</h2>
+      {/* Recent Activity - Mobile optimized */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Activité Récente</h2>
             <div className="px-2 py-1 bg-gray-100 rounded-full">
               <span className="text-xs font-medium text-gray-600">{recentStats.length}</span>
             </div>
           </div>
           <Link
             href="/history"
-            className="inline-flex items-center space-x-1 text-pink-600 hover:text-pink-700 text-sm font-medium group"
+            className="inline-flex items-center space-x-1 text-pink-600 hover:text-pink-700 text-xs sm:text-sm font-medium group"
           >
-            <span>Voir tout</span>
-            <TrendingUp className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            <span className="hidden sm:inline">Voir tout</span>
+            <span className="sm:hidden">Tout</span>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
         {recentStats.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="inline-flex p-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl mb-4">
-              <Star className="h-8 w-8 text-gray-400" />
+          <div className="text-center py-8 sm:py-12">
+            <div className="inline-flex p-3 sm:p-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl mb-3 sm:mb-4">
+              <Star className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Commencez votre activité</h3>
-            <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Commencez votre activité</h3>
+            <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6 max-w-sm mx-auto">
               Ajoutez votre première prestation pour commencer à suivre vos performances
             </p>
             <button
               onClick={() => setIsPrestationModalOpen(true)}
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
+              className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg text-sm sm:text-base"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Ajouter une prestation
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {recentStats.map((day) => (
               <div
                 key={day.date}
-                className="group relative overflow-hidden bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 hover:from-pink-50 hover:to-purple-50 transition-all duration-300 hover:shadow-md"
+                className="group relative overflow-hidden bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-3 sm:p-4 hover:from-pink-50 hover:to-purple-50 transition-all duration-300 hover:shadow-md"
               >
-                <div className="flex items-center justify-between">
+                {/* Mobile Layout */}
+                <div className="block sm:hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-pink-100 to-purple-100 rounded-lg flex items-center justify-center">
+                        <span className="text-xs font-bold text-pink-600">
+                          {format(parseISO(day.date), 'd')}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {format(parseISO(day.date), 'EEE d MMM', { locale: fr })}
+                        </p>
+                        <div className="flex items-center space-x-2 text-xs text-gray-600">
+                          {day.prestationCount > 0 && (
+                            <span className="flex items-center space-x-1">
+                              <Users className="h-3 w-3" />
+                              <span>{day.prestationCount}</span>
+                            </span>
+                          )}
+                          {day.expenseCount > 0 && (
+                            <span className="flex items-center space-x-1">
+                              <Minus className="h-3 w-3" />
+                              <span>{day.expenseCount}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {day.totalRevenue > 0 && (
+                        <p className="text-sm font-bold text-green-600">
+                          +{day.totalRevenue}€
+                        </p>
+                      )}
+                      {day.totalExpenses > 0 && (
+                        <p className="text-sm font-bold text-red-600">
+                          -{day.totalExpenses}€
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {(day.totalRevenue > 0 || day.totalExpenses > 0) && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-1">
+                        {/* Points verts pour les prestations */}
+                        {Array.from({ length: Math.min(day.prestationCount, 3) }).map((_, i) => (
+                          <div key={`prestation-${i}`} className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                        ))}
+                        {day.prestationCount > 3 && (
+                          <span className="text-xs text-green-600">+{day.prestationCount - 3}</span>
+                        )}
+                        
+                        {/* Séparateur si les deux types existent */}
+                        {day.prestationCount > 0 && day.expenseCount > 0 && (
+                          <div className="w-px h-2 bg-gray-300 mx-1"></div>
+                        )}
+                        
+                        {/* Points rouges pour les dépenses */}
+                        {Array.from({ length: Math.min(day.expenseCount, 3) }).map((_, i) => (
+                          <div key={`expense-${i}`} className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                        ))}
+                        {day.expenseCount > 3 && (
+                          <span className="text-xs text-red-600">+{day.expenseCount - 3}</span>
+                        )}
+                      </div>
+                      <p className={`text-xs font-semibold ${day.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        Net: {day.netProfit >= 0 ? '+' : ''}{day.netProfit}€
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop Layout */}
+                <div className="hidden sm:flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
                       <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
