@@ -5,7 +5,6 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Calendar as CalendarIcon,
-  Euro,
   Plus,
   Clock
 } from 'lucide-react';
@@ -67,7 +66,7 @@ const CalendarPage: React.FC = () => {
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Calendrier</h1>
-        <p className="text-gray-600">Vue d'ensemble de vos prestations par jour</p>
+        <p className="text-gray-600">Vue d&apos;ensemble de vos prestations par jour</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

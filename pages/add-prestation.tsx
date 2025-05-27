@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { format } from 'date-fns';
 import { Save, ArrowLeft, Euro, FileText } from 'lucide-react';
-import { SERVICES, getServicesByCategory, getServiceById } from '../data/services';
+import { getServicesByCategory, getServiceById } from '../data/services';
 import { addPrestation } from '../utils/storage';
 import { Prestation } from '../types';
 
