@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Calendar, Plus, BarChart3, History, Sparkles, Minus, X } from 'lucide-react';
@@ -15,6 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isPrestationModalOpen, setIsPrestationModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const navigation = [
     { name: 'Tableau de bord', href: '/', icon: BarChart3 },
@@ -53,6 +54,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -124,7 +142,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Floating Action Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <div className="relative">
+        <div 
+          ref={menuRef}
+          className="relative group"
+          onMouseEnter={() => window.innerWidth >= 1024 && setIsMenuOpen(true)}
+          onMouseLeave={() => window.innerWidth >= 1024 && setIsMenuOpen(false)}
+        >
           {/* Quick Actions Menu */}
           {isMenuOpen && (
             <div className="absolute bottom-16 right-0 mb-2 animate-in slide-in-from-bottom-2 fade-in duration-200">

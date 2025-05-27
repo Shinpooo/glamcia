@@ -21,6 +21,7 @@ const HistoryPage: React.FC = () => {
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'revenue' | 'expense'>('all');
+  const [dateFilter, setDateFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'description'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isLoading, setIsLoading] = useState(true);
@@ -72,6 +73,11 @@ const HistoryPage: React.FC = () => {
       filtered = filtered.filter(transaction => transaction.type === typeFilter);
     }
 
+    // Filter by date
+    if (dateFilter) {
+      filtered = filtered.filter(transaction => transaction.date === dateFilter);
+    }
+
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(transaction =>
@@ -101,7 +107,7 @@ const HistoryPage: React.FC = () => {
     });
 
     setFilteredTransactions(filtered);
-  }, [transactions, searchTerm, typeFilter, sortBy, sortOrder]);
+  }, [transactions, searchTerm, typeFilter, dateFilter, sortBy, sortOrder]);
 
   const handleDelete = async (transaction: Transaction) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer cette ${transaction.type === 'revenue' ? 'prestation' : 'dépense'} ?`)) {
@@ -300,59 +306,88 @@ const HistoryPage: React.FC = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Search */}
-          <div className="lg:col-span-5 relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher par description, catégorie..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white"
-            />
+        <div className="space-y-4">
+          {/* Première ligne: Recherche et Filtre par date */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Rechercher par description, catégorie..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white"
+              />
+            </div>
+
+            {/* Date Filter */}
+            <div className="relative">
+              <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="date"
+                placeholder="Filtrer par date..."
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className={`w-full pl-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white ${
+                  dateFilter ? 'pr-12' : 'pr-4'
+                }`}
+              />
+              {dateFilter && (
+                <button
+                  onClick={() => setDateFilter('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                  title="Effacer le filtre de date"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Type Filter */}
-          <div className="lg:col-span-4 relative">
-            <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as 'all' | 'revenue' | 'expense')}
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white appearance-none"
-            >
-              <option value="all">Toutes les transactions</option>
-              <option value="revenue">Revenus uniquement</option>
-              <option value="expense">Dépenses uniquement</option>
-            </select>
-          </div>
+          {/* Deuxième ligne: Type et Tri */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Type Filter */}
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as 'all' | 'revenue' | 'expense')}
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white appearance-none"
+              >
+                <option value="all">Toutes les transactions</option>
+                <option value="revenue">Revenus uniquement</option>
+                <option value="expense">Dépenses uniquement</option>
+              </select>
+            </div>
 
-          {/* Sort */}
-          <div className="lg:col-span-3 flex space-x-2">
-            <button
-              onClick={() => handleSort('date')}
-              className={`flex items-center justify-center space-x-1 px-4 py-3 rounded-xl text-sm font-medium transition-all flex-1 ${
-                sortBy === 'date' 
-                  ? 'bg-pink-100 text-pink-700 shadow-sm' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Date</span>
-              {sortBy === 'date' && <ArrowUpDown className="h-3 w-3" />}
-            </button>
-            <button
-              onClick={() => handleSort('amount')}
-              className={`flex items-center justify-center space-x-1 px-4 py-3 rounded-xl text-sm font-medium transition-all flex-1 ${
-                sortBy === 'amount' 
-                  ? 'bg-pink-100 text-pink-700 shadow-sm' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <Euro className="h-4 w-4" />
-              <span className="hidden sm:inline">Montant</span>
-              {sortBy === 'amount' && <ArrowUpDown className="h-3 w-3" />}
-            </button>
+            {/* Sort */}
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handleSort('date')}
+                className={`flex items-center justify-center space-x-1 px-4 py-3 rounded-xl text-sm font-medium transition-all flex-1 ${
+                  sortBy === 'date' 
+                    ? 'bg-pink-100 text-pink-700 shadow-sm' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Date</span>
+                {sortBy === 'date' && <ArrowUpDown className="h-3 w-3" />}
+              </button>
+              <button
+                onClick={() => handleSort('amount')}
+                className={`flex items-center justify-center space-x-1 px-4 py-3 rounded-xl text-sm font-medium transition-all flex-1 ${
+                  sortBy === 'amount' 
+                    ? 'bg-pink-100 text-pink-700 shadow-sm' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Euro className="h-4 w-4" />
+                <span className="hidden sm:inline">Montant</span>
+                {sortBy === 'amount' && <ArrowUpDown className="h-3 w-3" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -375,11 +410,12 @@ const HistoryPage: React.FC = () => {
               : 'Aucune transaction ne correspond à vos critères de recherche. Essayez de modifier vos filtres.'
             }
           </p>
-          {(searchTerm || typeFilter !== 'all') && (
+          {(searchTerm || typeFilter !== 'all' || dateFilter) && (
             <button
               onClick={() => {
                 setSearchTerm('');
                 setTypeFilter('all');
+                setDateFilter('');
               }}
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
             >

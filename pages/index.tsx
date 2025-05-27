@@ -13,14 +13,15 @@ import {
   BarChart3,
   Minus
 } from 'lucide-react';
-import { getDailyStats, getTotalRevenue, getRevenueByMonth, getTotalExpenses, getExpensesByMonth } from '../utils/storage';
-import { DailyStats } from '../types';
+import { getCombinedDailyStats, getTotalRevenue, getRevenueByMonth, getTotalExpenses, getExpensesByMonth } from '../utils/storage';
+import { CombinedDailyStats } from '../utils/storage';
 import Modal from '../components/Modal';
 import PrestationForm from '../components/PrestationForm';
 import ExpenseForm from '../components/ExpenseForm';
+import TimeChart from '../components/WeeklyChart';
 
 const Dashboard: React.FC = () => {
-  const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
+  const [dailyStats, setDailyStats] = useState<CombinedDailyStats[]>([]);
   const [totalRevenue, setTotalRevenue] = useState<number>(0);
   const [totalExpenses, setTotalExpenses] = useState<number>(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState<{ [month: string]: number }>({});
@@ -31,7 +32,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const loadData = () => {
-      const stats = getDailyStats();
+      const stats = getCombinedDailyStats();
       const total = getTotalRevenue();
       const totalExp = getTotalExpenses();
       const monthly = getRevenueByMonth();
@@ -58,7 +59,7 @@ const Dashboard: React.FC = () => {
   const handlePrestationSuccess = () => {
     setIsPrestationModalOpen(false);
     // Reload data
-    const stats = getDailyStats();
+    const stats = getCombinedDailyStats();
     const total = getTotalRevenue();
     const totalExp = getTotalExpenses();
     const monthly = getRevenueByMonth();
@@ -74,7 +75,7 @@ const Dashboard: React.FC = () => {
   const handleExpenseSuccess = () => {
     setIsExpenseModalOpen(false);
     // Reload data
-    const stats = getDailyStats();
+    const stats = getCombinedDailyStats();
     const total = getTotalRevenue();
     const totalExp = getTotalExpenses();
     const monthly = getRevenueByMonth();
@@ -262,6 +263,9 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Time Chart */}
+      <TimeChart />
+
       {/* Recent Activity */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -317,28 +321,64 @@ const Dashboard: React.FC = () => {
                       <p className="font-semibold text-gray-900 group-hover:text-pink-700 transition-colors">
                         {format(parseISO(day.date), 'EEEE d MMMM', { locale: fr })}
                       </p>
-                      <div className="flex items-center space-x-3 text-sm text-gray-600">
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span className="flex items-center space-x-1">
                           <Users className="h-3 w-3" />
                           <span>{day.prestationCount} prestation{day.prestationCount > 1 ? 's' : ''}</span>
                         </span>
-                        <span className="flex items-center space-x-1">
-                          <TrendingUp className="h-3 w-3" />
-                          <span>Moy. {Math.round(day.totalRevenue / day.prestationCount)}€</span>
-                        </span>
+                        {day.expenseCount > 0 && (
+                          <span className="flex items-center space-x-1">
+                            <Minus className="h-3 w-3" />
+                            <span>{day.expenseCount} dépense{day.expenseCount > 1 ? 's' : ''}</span>
+                          </span>
+                        )}
+                        {day.prestationCount > 0 && (
+                          <span className="flex items-center space-x-1">
+                            <TrendingUp className="h-3 w-3" />
+                            <span>Moy. {Math.round(day.totalRevenue / day.prestationCount)}€</span>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-green-600 group-hover:text-green-700 transition-colors">
-                      +{day.totalRevenue}€
-                    </p>
-                    <div className="flex items-center justify-end space-x-1 mt-1">
+                    <div className="space-y-1">
+                      {day.totalRevenue > 0 && (
+                        <p className="text-lg font-bold text-green-600 group-hover:text-green-700 transition-colors">
+                          +{day.totalRevenue}€
+                        </p>
+                      )}
+                      {day.totalExpenses > 0 && (
+                        <p className="text-lg font-bold text-red-600 group-hover:text-red-700 transition-colors">
+                          -{day.totalExpenses}€
+                        </p>
+                      )}
+                      {(day.totalRevenue > 0 || day.totalExpenses > 0) && (
+                        <p className={`text-sm font-semibold ${day.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          Net: {day.netProfit >= 0 ? '+' : ''}{day.netProfit}€
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-end space-x-1 mt-2">
+                      {/* Points verts pour les prestations */}
                       {Array.from({ length: Math.min(day.prestationCount, 5) }).map((_, i) => (
-                        <div key={i} className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                        <div key={`prestation-${i}`} className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
                       ))}
                       {day.prestationCount > 5 && (
-                        <span className="text-xs text-gray-500 ml-1">+{day.prestationCount - 5}</span>
+                        <span className="text-xs text-green-600 ml-1">+{day.prestationCount - 5}</span>
+                      )}
+                      
+                      {/* Séparateur si les deux types existent */}
+                      {day.prestationCount > 0 && day.expenseCount > 0 && (
+                        <div className="w-px h-3 bg-gray-300 mx-1"></div>
+                      )}
+                      
+                      {/* Points rouges pour les dépenses */}
+                      {Array.from({ length: Math.min(day.expenseCount, 5) }).map((_, i) => (
+                        <div key={`expense-${i}`} className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                      ))}
+                      {day.expenseCount > 5 && (
+                        <span className="text-xs text-red-600 ml-1">+{day.expenseCount - 5}</span>
                       )}
                     </div>
                   </div>

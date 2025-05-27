@@ -8,16 +8,23 @@ import {
   Clock,
   Trash2,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Edit3
 } from 'lucide-react';
 
-import { getCombinedDailyStats, deletePrestation, deleteExpense, CombinedDailyStats } from '../utils/storage';
+import { getCombinedDailyStats, deletePrestation, deleteExpense, CombinedDailyStats, getPrestationById, getExpenseById } from '../utils/storage';
+import Modal from '../components/Modal';
+import PrestationForm from '../components/PrestationForm';
+import ExpenseForm from '../components/ExpenseForm';
+import { Prestation, Expense } from '../types';
 
 const CalendarPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [dailyStats, setDailyStats] = useState<CombinedDailyStats[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingPrestation, setEditingPrestation] = useState<Prestation | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   useEffect(() => {
     const loadData = () => {
@@ -70,6 +77,33 @@ const CalendarPage: React.FC = () => {
       const stats = getCombinedDailyStats();
       setDailyStats(stats);
     }
+  };
+
+  const handleEditPrestation = (prestationId: string) => {
+    const prestation = getPrestationById(prestationId);
+    if (prestation) {
+      setEditingPrestation(prestation);
+    }
+  };
+
+  const handleEditExpense = (expenseId: string) => {
+    const expense = getExpenseById(expenseId);
+    if (expense) {
+      setEditingExpense(expense);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setEditingPrestation(null);
+    setEditingExpense(null);
+    // Reload data to refresh the calendar
+    const stats = getCombinedDailyStats();
+    setDailyStats(stats);
+  };
+
+  const handleEditCancel = () => {
+    setEditingPrestation(null);
+    setEditingExpense(null);
   };
 
   if (isLoading) {
@@ -282,6 +316,13 @@ const CalendarPage: React.FC = () => {
                             </div>
                             <div className="ml-3 flex space-x-1">
                               <button
+                                onClick={() => handleEditPrestation(prestation.id)}
+                                className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                aria-label="Modifier"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </button>
+                              <button
                                 onClick={() => handleDeletePrestation(prestation.id)}
                                 className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                                 aria-label="Supprimer"
@@ -325,6 +366,13 @@ const CalendarPage: React.FC = () => {
                               )}
                             </div>
                             <div className="ml-3 flex space-x-1">
+                              <button
+                                onClick={() => handleEditExpense(expense.id)}
+                                className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                aria-label="Modifier"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </button>
                               <button
                                 onClick={() => handleDeleteExpense(expense.id)}
                                 className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
@@ -419,6 +467,37 @@ const CalendarPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Modals */}
+      {editingPrestation && (
+        <Modal
+          isOpen={true}
+          onClose={handleEditCancel}
+          title="Modifier la Prestation"
+          size="lg"
+        >
+          <PrestationForm
+            prestation={editingPrestation}
+            onSuccess={handleEditSuccess}
+            onCancel={handleEditCancel}
+          />
+        </Modal>
+      )}
+
+      {editingExpense && (
+        <Modal
+          isOpen={true}
+          onClose={handleEditCancel}
+          title="Modifier la Dépense"
+          size="lg"
+        >
+          <ExpenseForm
+            expense={editingExpense}
+            onSuccess={handleEditSuccess}
+            onCancel={handleEditCancel}
+          />
+        </Modal>
+      )}
     </div>
   );
 };
