@@ -10,6 +10,8 @@ import {
   Tooltip,
   Legend,
   ChartOptions,
+  BarController,
+  LineController,
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import { 
@@ -45,7 +47,9 @@ ChartJS.register(
   PointElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  BarController,
+  LineController
 );
 
 type TimeUnit = 'day' | 'week' | 'month' | 'year';
