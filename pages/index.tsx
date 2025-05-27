@@ -1,115 +1,213 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { 
+  Euro, 
+  Calendar, 
+  TrendingUp, 
+  Users, 
+  Plus,
+  Clock,
+  Star
+} from 'lucide-react';
+import { getDailyStats, getTotalRevenue, getRevenueByMonth } from '../utils/storage';
+import { DailyStats } from '../types';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const Dashboard: React.FC = () => {
+  const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<{ [month: string]: number }>({});
+  const [isLoading, setIsLoading] = useState(true);
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  useEffect(() => {
+    const loadData = () => {
+      const stats = getDailyStats();
+      const total = getTotalRevenue();
+      const monthly = getRevenueByMonth();
+      
+      setDailyStats(stats);
+      setTotalRevenue(total);
+      setMonthlyRevenue(monthly);
+      setIsLoading(false);
+    };
 
-export default function Home() {
+    loadData();
+  }, []);
+
+  const currentMonth = format(new Date(), 'yyyy-MM');
+  const currentMonthRevenue = monthlyRevenue[currentMonth] || 0;
+  const recentStats = dailyStats.slice(0, 5);
+  const totalPrestations = dailyStats.reduce((sum, day) => sum + day.prestationCount, 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              pages/index.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Tableau de Bord
+        </h1>
+        <p className="text-gray-600">
+          Aperçu de votre activité de make-up artist
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Revenus Total</p>
+              <p className="text-2xl font-bold text-gray-900">{totalRevenue}€</p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-full">
+              <Euro className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Ce Mois</p>
+              <p className="text-2xl font-bold text-gray-900">{currentMonthRevenue}€</p>
+            </div>
+            <div className="bg-blue-100 p-3 rounded-full">
+              <TrendingUp className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Prestations</p>
+              <p className="text-2xl font-bold text-gray-900">{totalPrestations}</p>
+            </div>
+            <div className="bg-purple-100 p-3 rounded-full">
+              <Users className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Jours Actifs</p>
+              <p className="text-2xl font-bold text-gray-900">{dailyStats.length}</p>
+            </div>
+            <div className="bg-pink-100 p-3 rounded-full">
+              <Calendar className="h-6 w-6 text-pink-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions Rapides</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Link
+            href="/add-prestation"
+            className="flex items-center space-x-3 p-4 bg-pink-50 rounded-lg hover:bg-pink-100 transition-colors group"
+          >
+            <div className="bg-pink-500 p-2 rounded-full group-hover:bg-pink-600 transition-colors">
+              <Plus className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">Nouvelle Prestation</p>
+              <p className="text-sm text-gray-600">Ajouter une prestation</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/prestations"
+            className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors group"
+          >
+            <div className="bg-blue-500 p-2 rounded-full group-hover:bg-blue-600 transition-colors">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">Historique</p>
+              <p className="text-sm text-gray-600">Voir toutes les prestations</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/calendar"
+            className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors group"
+          >
+            <div className="bg-purple-500 p-2 rounded-full group-hover:bg-purple-600 transition-colors">
+              <Calendar className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">Calendrier</p>
+              <p className="text-sm text-gray-600">Vue par jour</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">Activité Récente</h2>
+          <Link
+            href="/prestations"
+            className="text-pink-600 hover:text-pink-700 text-sm font-medium"
+          >
+            Voir tout
+          </Link>
+        </div>
+
+        {recentStats.length === 0 ? (
+          <div className="text-center py-8">
+            <Star className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 mb-4">Aucune prestation enregistrée</p>
+            <Link
+              href="/add-prestation"
+              className="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter votre première prestation
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recentStats.map((day) => (
+              <div
+                key={day.date}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {format(parseISO(day.date), 'EEEE d MMMM yyyy', { locale: fr })}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {day.prestationCount} prestation{day.prestationCount > 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-gray-900">{day.totalRevenue}€</p>
+                  <p className="text-sm text-gray-600">
+                    Moy. {Math.round(day.totalRevenue / day.prestationCount)}€
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default Dashboard;
