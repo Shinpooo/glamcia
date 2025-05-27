@@ -5,22 +5,23 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Calendar as CalendarIcon,
-  Plus,
-  Clock
+  Clock,
+  Trash2,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
-import Link from 'next/link';
-import { getDailyStats } from '../utils/storage';
-import { DailyStats } from '../types';
+
+import { getCombinedDailyStats, deletePrestation, deleteExpense, CombinedDailyStats } from '../utils/storage';
 
 const CalendarPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
+  const [dailyStats, setDailyStats] = useState<CombinedDailyStats[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = () => {
-      const stats = getDailyStats();
+      const stats = getCombinedDailyStats();
       setDailyStats(stats);
       setIsLoading(false);
     };
@@ -46,12 +47,30 @@ const CalendarPage: React.FC = () => {
     setSelectedDate(selectedDate && isSameDay(selectedDate, date) ? null : date);
   };
 
-  const getDayStats = (date: Date): DailyStats | undefined => {
+  const getDayStats = (date: Date): CombinedDailyStats | undefined => {
     const dateString = format(date, 'yyyy-MM-dd');
     return dailyStats.find(stats => stats.date === dateString);
   };
 
   const selectedDayStats = selectedDate ? getDayStats(selectedDate) : null;
+
+  const handleDeletePrestation = (prestationId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette prestation ?')) {
+      deletePrestation(prestationId);
+      // Reload data to refresh the calendar
+      const stats = getCombinedDailyStats();
+      setDailyStats(stats);
+    }
+  };
+
+  const handleDeleteExpense = (expenseId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette dépense ?')) {
+      deleteExpense(expenseId);
+      // Reload data to refresh the calendar
+      const stats = getCombinedDailyStats();
+      setDailyStats(stats);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -66,13 +85,13 @@ const CalendarPage: React.FC = () => {
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Calendrier</h1>
-        <p className="text-gray-600">Vue d&apos;ensemble de vos prestations par jour</p>
+        <p className="text-gray-600">Vue d&apos;ensemble de vos revenus et dépenses par jour</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-3 sm:p-6">
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-6">
               <button
@@ -83,7 +102,7 @@ const CalendarPage: React.FC = () => {
                 <ChevronLeft className="h-5 w-5 text-gray-600" />
               </button>
               
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                 {format(currentDate, 'MMMM yyyy', { locale: fr })}
               </h2>
               
@@ -99,8 +118,9 @@ const CalendarPage: React.FC = () => {
             {/* Days of Week */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day) => (
-                <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
-                  {day}
+                <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-gray-500">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.charAt(0)}</span>
                 </div>
               ))}
             </div>
@@ -109,7 +129,7 @@ const CalendarPage: React.FC = () => {
             <div className="grid grid-cols-7 gap-1">
               {/* Empty cells for days before month start */}
               {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, index) => (
-                <div key={`empty-${index}`} className="p-2 h-20"></div>
+                <div key={`empty-${index}`} className="p-1 sm:p-2 h-16 sm:h-20 md:h-24"></div>
               ))}
               
               {/* Days of the month */}
@@ -122,7 +142,7 @@ const CalendarPage: React.FC = () => {
                   <button
                     key={date.toISOString()}
                     onClick={() => handleDateClick(date)}
-                    className={`p-2 h-20 border rounded-lg text-left transition-all hover:shadow-sm ${
+                    className={`p-1 sm:p-2 h-16 sm:h-20 md:h-24 border rounded-lg text-left transition-all hover:shadow-sm ${
                       isSelected
                         ? 'border-pink-500 bg-pink-50'
                         : isToday
@@ -132,16 +152,46 @@ const CalendarPage: React.FC = () => {
                         : 'border-gray-200 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="text-sm font-medium text-gray-900 mb-1">
+                    <div className="text-xs sm:text-sm font-medium text-gray-900 mb-1">
                       {format(date, 'd')}
                     </div>
                     {dayStats && (
-                      <div className="space-y-1">
-                        <div className="text-xs text-green-700 font-medium">
-                          {dayStats.prestationCount} prestation{dayStats.prestationCount > 1 ? 's' : ''}
+                      <div className="space-y-0.5">
+                        {/* Mobile: Show abbreviated info */}
+                        <div className="sm:hidden">
+                          {dayStats.totalRevenue > 0 && (
+                            <div className="text-[10px] text-green-600 font-medium leading-tight">
+                              +{dayStats.totalRevenue}€
+                            </div>
+                          )}
+                          {dayStats.totalExpenses > 0 && (
+                            <div className="text-[10px] text-red-600 font-medium leading-tight">
+                              -{dayStats.totalExpenses}€
+                            </div>
+                          )}
+                          <div className={`text-[10px] font-medium leading-tight ${
+                            dayStats.netProfit >= 0 ? 'text-green-700' : 'text-red-700'
+                          }`}>
+                            Net: {dayStats.netProfit}€
+                          </div>
                         </div>
-                        <div className="text-xs text-green-600">
-                          {dayStats.totalRevenue}€
+                        {/* Desktop: Show full info */}
+                        <div className="hidden sm:block space-y-1">
+                          {dayStats.totalRevenue > 0 && (
+                            <div className="text-xs text-green-600 font-medium">
+                              +{dayStats.totalRevenue}€
+                            </div>
+                          )}
+                          {dayStats.totalExpenses > 0 && (
+                            <div className="text-xs text-red-600 font-medium">
+                              -{dayStats.totalExpenses}€
+                            </div>
+                          )}
+                          <div className={`text-xs font-medium ${
+                            dayStats.netProfit >= 0 ? 'text-green-700' : 'text-red-700'
+                          }`}>
+                            Net: {dayStats.netProfit}€
+                          </div>
                         </div>
                       </div>
                     )}
@@ -154,17 +204,6 @@ const CalendarPage: React.FC = () => {
 
         {/* Day Details */}
         <div className="space-y-6">
-          {/* Quick Add */}
-          <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Action Rapide</h3>
-            <Link
-              href="/add-prestation"
-              className="flex items-center justify-center space-x-2 w-full px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Nouvelle Prestation</span>
-            </Link>
-          </div>
 
           {/* Selected Day Details */}
           {selectedDate ? (
@@ -182,57 +221,128 @@ const CalendarPage: React.FC = () => {
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-600">Prestations:</span>
-                        <div className="font-semibold text-gray-900">
-                          {selectedDayStats.prestationCount}
+                        <span className="text-gray-600">Revenus:</span>
+                        <div className="font-semibold text-green-600">
+                          +{selectedDayStats.totalRevenue}€
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {selectedDayStats.prestationCount} prestation{selectedDayStats.prestationCount > 1 ? 's' : ''}
                         </div>
                       </div>
                       <div>
-                        <span className="text-gray-600">Revenus:</span>
-                        <div className="font-semibold text-pink-600">
-                          {selectedDayStats.totalRevenue}€
+                        <span className="text-gray-600">Dépenses:</span>
+                        <div className="font-semibold text-red-600">
+                          -{selectedDayStats.totalExpenses}€
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {selectedDayStats.expenseCount} dépense{selectedDayStats.expenseCount > 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Bénéfice net:</span>
+                        <div className={`font-semibold ${
+                          selectedDayStats.netProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {selectedDayStats.netProfit >= 0 ? '+' : ''}{selectedDayStats.netProfit}€
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Prestations List */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">Prestations du jour</h4>
-                    {selectedDayStats.prestations.map((prestation) => (
-                      <div
-                        key={prestation.id}
-                        className="p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="font-medium text-gray-900 mb-1">
-                          {prestation.serviceName}
-                        </div>
-                        <div className="flex items-center justify-between text-sm text-gray-600">
-                          <span>{prestation.serviceCategory}</span>
-                          <span className="font-semibold text-pink-600">
-                            {prestation.finalPrice}€
-                          </span>
-                        </div>
-                        {prestation.notes && (
-                          <div className="mt-2 text-xs text-gray-500">
-                            {prestation.notes}
+                  {selectedDayStats.prestations.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-gray-900 flex items-center space-x-2">
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                        <span>Prestations du jour</span>
+                      </h4>
+                      {selectedDayStats.prestations.map((prestation) => (
+                        <div
+                          key={prestation.id}
+                          className="p-3 bg-green-50 rounded-lg border border-green-200"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 mb-1">
+                                {prestation.serviceName}
+                              </div>
+                              <div className="flex items-center justify-between text-sm text-gray-600">
+                                <span>{prestation.serviceCategory}</span>
+                                <span className="font-semibold text-green-600">
+                                  +{prestation.price}€
+                                </span>
+                              </div>
+                              {prestation.notes && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                  {prestation.notes}
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-3 flex space-x-1">
+                              <button
+                                onClick={() => handleDeletePrestation(prestation.id)}
+                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                aria-label="Supprimer"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Expenses List */}
+                  {selectedDayStats.expenses.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-gray-900 flex items-center space-x-2">
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                        <span>Dépenses du jour</span>
+                      </h4>
+                      {selectedDayStats.expenses.map((expense) => (
+                        <div
+                          key={expense.id}
+                          className="p-3 bg-red-50 rounded-lg border border-red-200"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 mb-1">
+                                {expense.categoryName}
+                              </div>
+                              <div className="flex items-center justify-between text-sm text-gray-600">
+                                <span>Dépense</span>
+                                <span className="font-semibold text-red-600">
+                                  -{expense.amount}€
+                                </span>
+                              </div>
+                              {expense.description && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                  {expense.description}
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-3 flex space-x-1">
+                              <button
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                aria-label="Supprimer"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <Clock className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-4">Aucune prestation ce jour</p>
-                  <Link
-                    href={`/add-prestation?date=${format(selectedDate, 'yyyy-MM-dd')}`}
-                    className="inline-flex items-center space-x-2 px-3 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors text-sm"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Ajouter une prestation</span>
-                  </Link>
+                  <p className="text-gray-500">Aucune activité ce jour</p>
                 </div>
               )}
             </div>
@@ -261,7 +371,10 @@ const CalendarPage: React.FC = () => {
               });
               
               const totalRevenue = monthlyStats.reduce((sum, stats) => sum + stats.totalRevenue, 0);
+              const totalExpenses = monthlyStats.reduce((sum, stats) => sum + stats.totalExpenses, 0);
               const totalPrestations = monthlyStats.reduce((sum, stats) => sum + stats.prestationCount, 0);
+              const totalExpenseCount = monthlyStats.reduce((sum, stats) => sum + stats.expenseCount, 0);
+              const netProfit = totalRevenue - totalExpenses;
               const activeDays = monthlyStats.length;
               
               return (
@@ -271,18 +384,32 @@ const CalendarPage: React.FC = () => {
                     <span className="font-semibold text-gray-900">{activeDays}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Total prestations:</span>
+                    <span className="text-gray-600">Prestations:</span>
                     <span className="font-semibold text-gray-900">{totalPrestations}</span>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Dépenses:</span>
+                    <span className="font-semibold text-gray-900">{totalExpenseCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-gray-600">Revenus totaux:</span>
-                    <span className="font-semibold text-pink-600">{totalRevenue}€</span>
+                    <span className="font-semibold text-green-600">+{totalRevenue}€</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Dépenses totales:</span>
+                    <span className="font-semibold text-red-600">-{totalExpenses}€</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-200 pt-3">
+                    <span className="text-gray-600 font-medium">Bénéfice net:</span>
+                    <span className={`font-semibold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {netProfit >= 0 ? '+' : ''}{netProfit}€
+                    </span>
                   </div>
                   {activeDays > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Moyenne/jour:</span>
-                      <span className="font-semibold text-gray-900">
-                        {Math.round(totalRevenue / activeDays)}€
+                      <span className={`font-semibold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {netProfit >= 0 ? '+' : ''}{Math.round(netProfit / activeDays)}€
                       </span>
                     </div>
                   )}

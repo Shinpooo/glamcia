@@ -9,26 +9,39 @@ import {
   Users, 
   Plus,
   Clock,
-  Star
+  Star,
+  BarChart3,
+  Minus
 } from 'lucide-react';
-import { getDailyStats, getTotalRevenue, getRevenueByMonth } from '../utils/storage';
+import { getDailyStats, getTotalRevenue, getRevenueByMonth, getTotalExpenses, getExpensesByMonth } from '../utils/storage';
 import { DailyStats } from '../types';
+import Modal from '../components/Modal';
+import PrestationForm from '../components/PrestationForm';
+import ExpenseForm from '../components/ExpenseForm';
 
 const Dashboard: React.FC = () => {
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [totalExpenses, setTotalExpenses] = useState<number>(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState<{ [month: string]: number }>({});
+  const [monthlyExpenses, setMonthlyExpenses] = useState<{ [month: string]: number }>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isPrestationModalOpen, setIsPrestationModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
       const stats = getDailyStats();
       const total = getTotalRevenue();
+      const totalExp = getTotalExpenses();
       const monthly = getRevenueByMonth();
+      const monthlyExp = getExpensesByMonth();
       
       setDailyStats(stats);
       setTotalRevenue(total);
+      setTotalExpenses(totalExp);
       setMonthlyRevenue(monthly);
+      setMonthlyExpenses(monthlyExp);
       setIsLoading(false);
     };
 
@@ -37,8 +50,42 @@ const Dashboard: React.FC = () => {
 
   const currentMonth = format(new Date(), 'yyyy-MM');
   const currentMonthRevenue = monthlyRevenue[currentMonth] || 0;
+  const currentMonthExpenses = monthlyExpenses[currentMonth] || 0;
+  const netProfit = totalRevenue - totalExpenses;
+  const currentMonthProfit = currentMonthRevenue - currentMonthExpenses;
   const recentStats = dailyStats.slice(0, 5);
-  const totalPrestations = dailyStats.reduce((sum, day) => sum + day.prestationCount, 0);
+
+  const handlePrestationSuccess = () => {
+    setIsPrestationModalOpen(false);
+    // Reload data
+    const stats = getDailyStats();
+    const total = getTotalRevenue();
+    const totalExp = getTotalExpenses();
+    const monthly = getRevenueByMonth();
+    const monthlyExp = getExpensesByMonth();
+    
+    setDailyStats(stats);
+    setTotalRevenue(total);
+    setTotalExpenses(totalExp);
+    setMonthlyRevenue(monthly);
+    setMonthlyExpenses(monthlyExp);
+  };
+
+  const handleExpenseSuccess = () => {
+    setIsExpenseModalOpen(false);
+    // Reload data
+    const stats = getDailyStats();
+    const total = getTotalRevenue();
+    const totalExp = getTotalExpenses();
+    const monthly = getRevenueByMonth();
+    const monthlyExp = getExpensesByMonth();
+    
+    setDailyStats(stats);
+    setTotalRevenue(total);
+    setTotalExpenses(totalExp);
+    setMonthlyRevenue(monthly);
+    setMonthlyExpenses(monthlyExp);
+  };
 
   if (isLoading) {
     return (
@@ -52,160 +99,283 @@ const Dashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
+        <div className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full mb-4">
+          <BarChart3 className="h-5 w-5 text-pink-600" />
+          <span className="text-sm font-medium text-pink-700">Tableau de bord</span>
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Tableau de Bord
+          Bienvenue sur Glamcia
         </h1>
-        <p className="text-gray-600">
-          Aperçu de votre activité de make-up artist
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Suivez vos performances, gérez vos prestations et optimisez la rentabilité de votre salon d&apos;esthétique
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Revenus Total</p>
-              <p className="text-2xl font-bold text-gray-900">{totalRevenue}€</p>
+        {/* Revenus Card */}
+        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl group-hover:scale-110 transition-transform">
+              <TrendingUp className="h-6 w-6 text-green-600" />
             </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <Euro className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Ce Mois</p>
-              <p className="text-2xl font-bold text-gray-900">{currentMonthRevenue}€</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
+            <div className="text-right">
+              <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Revenus</p>
+              <p className="text-2xl font-bold text-green-700">{totalRevenue}€</p>
             </div>
           </div>
+
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Prestations</p>
-              <p className="text-2xl font-bold text-gray-900">{totalPrestations}</p>
+        {/* Dépenses Card */}
+        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-red-100 to-rose-100 rounded-xl group-hover:scale-110 transition-transform">
+              <TrendingUp className="h-6 w-6 text-red-600 rotate-180" />
             </div>
-            <div className="bg-purple-100 p-3 rounded-full">
-              <Users className="h-6 w-6 text-purple-600" />
+            <div className="text-right">
+              <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Dépenses</p>
+              <p className="text-2xl font-bold text-red-700">{totalExpenses}€</p>
             </div>
           </div>
+
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Jours Actifs</p>
-              <p className="text-2xl font-bold text-gray-900">{dailyStats.length}</p>
+        {/* Bénéfice Net Card */}
+        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className={`p-3 rounded-xl group-hover:scale-110 transition-transform ${
+              netProfit >= 0 
+                ? 'bg-gradient-to-br from-emerald-100 to-green-100' 
+                : 'bg-gradient-to-br from-red-100 to-rose-100'
+            }`}>
+              <Euro className={`h-6 w-6 ${netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
             </div>
-            <div className="bg-pink-100 p-3 rounded-full">
-              <Calendar className="h-6 w-6 text-pink-600" />
+            <div className="text-right">
+              <p className={`text-xs font-medium uppercase tracking-wide ${
+                netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
+              }`}>Bénéfice Net</p>
+              <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                {netProfit >= 0 ? '+' : ''}{netProfit}€
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Ce Mois Card */}
+        <div className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl group-hover:scale-110 transition-transform">
+              <Calendar className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Ce Mois</p>
+              <p className={`text-2xl font-bold ${currentMonthProfit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                {currentMonthProfit >= 0 ? '+' : ''}{currentMonthProfit}€
+              </p>
+            </div>
+          </div>
+          <div className="text-xs text-gray-500 space-y-1">
+            <div className="flex justify-between">
+              <span>Revenus:</span>
+              <span className="text-green-600 font-medium">+{currentMonthRevenue}€</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Dépenses:</span>
+              <span className="text-red-600 font-medium">-{currentMonthExpenses}€</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions Rapides</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link
-            href="/add-prestation"
-            className="flex items-center space-x-3 p-4 bg-pink-50 rounded-lg hover:bg-pink-100 transition-colors group"
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Actions Rapides</h2>
+          <div className="h-1 w-12 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full"></div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <button
+            onClick={() => setIsPrestationModalOpen(true)}
+            className="group relative overflow-hidden bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-6 hover:from-pink-100 hover:to-rose-100 transition-all duration-300 hover:scale-105 hover:shadow-lg text-left"
           >
-            <div className="bg-pink-500 p-2 rounded-full group-hover:bg-pink-600 transition-colors">
-              <Plus className="h-5 w-5 text-white" />
+            <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Plus className="h-8 w-8 text-pink-600" />
             </div>
-            <div>
-              <p className="font-medium text-gray-900">Nouvelle Prestation</p>
-              <p className="text-sm text-gray-600">Ajouter une prestation</p>
+            <div className="relative">
+              <div className="inline-flex p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl mb-4 group-hover:scale-110 transition-transform">
+                <Plus className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">Prestation</h3>
+              <p className="text-sm text-gray-600">Ajouter un service</p>
             </div>
-          </Link>
+          </button>
+
+          <button
+            onClick={() => setIsExpenseModalOpen(true)}
+            className="group relative overflow-hidden bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 hover:from-orange-100 hover:to-amber-100 transition-all duration-300 hover:scale-105 hover:shadow-lg text-left"
+          >
+            <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Minus className="h-8 w-8 text-orange-600" />
+            </div>
+            <div className="relative">
+              <div className="inline-flex p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl mb-4 group-hover:scale-110 transition-transform">
+                <Minus className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">Dépense</h3>
+              <p className="text-sm text-gray-600">Ajouter un coût</p>
+            </div>
+          </button>
 
           <Link
-            href="/prestations"
-            className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors group"
+            href="/history"
+            className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 hover:scale-105 hover:shadow-lg"
           >
-            <div className="bg-blue-500 p-2 rounded-full group-hover:bg-blue-600 transition-colors">
-              <Clock className="h-5 w-5 text-white" />
+            <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Clock className="h-8 w-8 text-blue-600" />
             </div>
-            <div>
-              <p className="font-medium text-gray-900">Historique</p>
-              <p className="text-sm text-gray-600">Voir toutes les prestations</p>
+            <div className="relative">
+              <div className="inline-flex p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl mb-4 group-hover:scale-110 transition-transform">
+                <Clock className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">Historique</h3>
+              <p className="text-sm text-gray-600">Voir tout</p>
             </div>
           </Link>
 
           <Link
             href="/calendar"
-            className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors group"
+            className="group relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 hover:from-purple-100 hover:to-violet-100 transition-all duration-300 hover:scale-105 hover:shadow-lg"
           >
-            <div className="bg-purple-500 p-2 rounded-full group-hover:bg-purple-600 transition-colors">
-              <Calendar className="h-5 w-5 text-white" />
+            <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Calendar className="h-8 w-8 text-purple-600" />
             </div>
-            <div>
-              <p className="font-medium text-gray-900">Calendrier</p>
-              <p className="text-sm text-gray-600">Vue par jour</p>
+            <div className="relative">
+              <div className="inline-flex p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl mb-4 group-hover:scale-110 transition-transform">
+                <Calendar className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">Calendrier</h3>
+              <p className="text-sm text-gray-600">Vue mensuelle</p>
             </div>
           </Link>
         </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Activité Récente</h2>
+          <div className="flex items-center space-x-3">
+            <h2 className="text-xl font-bold text-gray-900">Activité Récente</h2>
+            <div className="px-2 py-1 bg-gray-100 rounded-full">
+              <span className="text-xs font-medium text-gray-600">{recentStats.length}</span>
+            </div>
+          </div>
           <Link
-            href="/prestations"
-            className="text-pink-600 hover:text-pink-700 text-sm font-medium"
+            href="/history"
+            className="inline-flex items-center space-x-1 text-pink-600 hover:text-pink-700 text-sm font-medium group"
           >
-            Voir tout
+            <span>Voir tout</span>
+            <TrendingUp className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
         {recentStats.length === 0 ? (
-          <div className="text-center py-8">
-            <Star className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">Aucune prestation enregistrée</p>
-            <Link
-              href="/add-prestation"
-              className="inline-flex items-center px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+          <div className="text-center py-12">
+            <div className="inline-flex p-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl mb-4">
+              <Star className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Commencez votre activité</h3>
+            <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+              Ajoutez votre première prestation pour commencer à suivre vos performances
+            </p>
+            <button
+              onClick={() => setIsPrestationModalOpen(true)}
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter votre première prestation
-            </Link>
+              <Plus className="h-5 w-5 mr-2" />
+              Ajouter une prestation
+            </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {recentStats.map((day) => (
               <div
                 key={day.date}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                className="group relative overflow-hidden bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 hover:from-pink-50 hover:to-purple-50 transition-all duration-300 hover:shadow-md"
               >
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {format(parseISO(day.date), 'EEEE d MMMM yyyy', { locale: fr })}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {day.prestationCount} prestation{day.prestationCount > 1 ? 's' : ''}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span className="text-sm font-bold text-pink-600">
+                          {format(parseISO(day.date), 'd')}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 group-hover:text-pink-700 transition-colors">
+                        {format(parseISO(day.date), 'EEEE d MMMM', { locale: fr })}
+                      </p>
+                      <div className="flex items-center space-x-3 text-sm text-gray-600">
+                        <span className="flex items-center space-x-1">
+                          <Users className="h-3 w-3" />
+                          <span>{day.prestationCount} prestation{day.prestationCount > 1 ? 's' : ''}</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>Moy. {Math.round(day.totalRevenue / day.prestationCount)}€</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-green-600 group-hover:text-green-700 transition-colors">
+                      +{day.totalRevenue}€
+                    </p>
+                    <div className="flex items-center justify-end space-x-1 mt-1">
+                      {Array.from({ length: Math.min(day.prestationCount, 5) }).map((_, i) => (
+                        <div key={i} className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                      ))}
+                      {day.prestationCount > 5 && (
+                        <span className="text-xs text-gray-500 ml-1">+{day.prestationCount - 5}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900">{day.totalRevenue}€</p>
-                  <p className="text-sm text-gray-600">
-                    Moy. {Math.round(day.totalRevenue / day.prestationCount)}€
-                  </p>
-                </div>
+                
+                {/* Hover effect indicator */}
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-pink-200 rounded-xl transition-colors pointer-events-none"></div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <Modal
+        isOpen={isPrestationModalOpen}
+        onClose={() => setIsPrestationModalOpen(false)}
+        title="Nouvelle Prestation"
+        size="lg"
+      >
+        <PrestationForm
+          onSuccess={handlePrestationSuccess}
+          onCancel={() => setIsPrestationModalOpen(false)}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        title="Nouvelle Dépense"
+        size="lg"
+      >
+        <ExpenseForm
+          onSuccess={handleExpenseSuccess}
+          onCancel={() => setIsExpenseModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 };

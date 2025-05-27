@@ -3,22 +3,23 @@ import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Search, 
-  Filter, 
   Trash2, 
   Euro, 
   Calendar,
   FileText,
   Tag,
-  ArrowUpDown
+  ArrowUpDown,
+  Edit3
 } from 'lucide-react';
 import { loadPrestations, deletePrestation } from '../utils/storage';
 import { Prestation } from '../types';
+import Link from 'next/link';
 
 const PrestationsPage: React.FC = () => {
   const [prestations, setPrestations] = useState<Prestation[]>([]);
   const [filteredPrestations, setFilteredPrestations] = useState<Prestation[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'service'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isLoading, setIsLoading] = useState(true);
@@ -46,10 +47,7 @@ const PrestationsPage: React.FC = () => {
       );
     }
 
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter(prestation => prestation.serviceCategory === selectedCategory);
-    }
+
 
     // Sort
     filtered.sort((a, b) => {
@@ -60,7 +58,7 @@ const PrestationsPage: React.FC = () => {
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
           break;
         case 'price':
-          comparison = a.finalPrice - b.finalPrice;
+          comparison = a.price - b.price;
           break;
         case 'service':
           comparison = a.serviceName.localeCompare(b.serviceName);
@@ -71,7 +69,7 @@ const PrestationsPage: React.FC = () => {
     });
 
     setFilteredPrestations(filtered);
-  }, [prestations, searchTerm, selectedCategory, sortBy, sortOrder]);
+  }, [prestations, searchTerm, sortBy, sortOrder]);
 
   const handleDelete = (id: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette prestation ?')) {
@@ -90,8 +88,7 @@ const PrestationsPage: React.FC = () => {
     }
   };
 
-  const categories = [...new Set(prestations.map(p => p.serviceCategory))];
-  const totalRevenue = filteredPrestations.reduce((sum, p) => sum + p.finalPrice, 0);
+  const totalRevenue = filteredPrestations.reduce((sum, p) => sum + p.price, 0);
 
   if (isLoading) {
     return (
@@ -114,7 +111,7 @@ const PrestationsPage: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-pink-100 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -127,20 +124,7 @@ const PrestationsPage: React.FC = () => {
             />
           </div>
 
-          {/* Category Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-colors appearance-none"
-            >
-              <option value="">Toutes les catégories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
+
 
           {/* Sort */}
           <div className="flex space-x-2">
@@ -194,11 +178,10 @@ const PrestationsPage: React.FC = () => {
               : 'Aucune prestation ne correspond à vos critères'
             }
           </p>
-          {searchTerm || selectedCategory ? (
+          {searchTerm ? (
             <button
               onClick={() => {
                 setSearchTerm('');
-                setSelectedCategory('');
               }}
               className="text-pink-600 hover:text-pink-700 font-medium"
             >
@@ -219,12 +202,9 @@ const PrestationsPage: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {prestation.serviceName}
                     </h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
-                      {prestation.serviceCategory}
-                    </span>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4" />
                       <span>
@@ -234,15 +214,8 @@ const PrestationsPage: React.FC = () => {
                     
                     <div className="flex items-center space-x-2">
                       <Euro className="h-4 w-4" />
-                      <span>
-                        {prestation.basePrice}€
-                        {prestation.supplement > 0 && ` + ${prestation.supplement}€`}
-                      </span>
-                    </div>
-                    
-                    <div className="text-right sm:text-left">
                       <span className="text-lg font-bold text-pink-600">
-                        {prestation.finalPrice}€
+                        {prestation.price}€
                       </span>
                     </div>
                   </div>
@@ -257,13 +230,22 @@ const PrestationsPage: React.FC = () => {
                   )}
                 </div>
 
-                <button
-                  onClick={() => handleDelete(prestation.id)}
-                  className="ml-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  aria-label="Supprimer la prestation"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="ml-4 flex space-x-2">
+                  <Link
+                    href={`/edit-prestation/${prestation.id}`}
+                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                    aria-label="Modifier la prestation"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(prestation.id)}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    aria-label="Supprimer la prestation"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
