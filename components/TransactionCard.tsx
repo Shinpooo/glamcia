@@ -11,6 +11,7 @@ import {
   TrendingDown 
 } from 'lucide-react';
 import { Transaction } from '../types';
+import PaymentMethodDisplay from './PaymentMethodDisplay';
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -87,6 +88,20 @@ const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, onDelete
               </div>
             </div>
           </div>
+
+          {/* Payment Method Display for Revenue Transactions */}
+          {transaction.type === 'revenue' && transaction.paymentMethod && (
+            <div className="mb-4">
+              <PaymentMethodDisplay
+                paymentMethod={transaction.paymentMethod}
+                cashAmount={transaction.cashAmount || 0}
+                cardAmount={transaction.cardAmount || 0}
+                totalAmount={transaction.amount}
+                size="md"
+                showAmounts={true}
+              />
+            </div>
+          )}
 
           {transaction.notes && (
             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">

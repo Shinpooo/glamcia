@@ -1,40 +1,63 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { ArrowLeft, Save, Euro } from 'lucide-react';
+import { format } from 'date-fns';
+import { ArrowLeft, Save, Trash2, Euro } from 'lucide-react';
 import Link from 'next/link';
-import { getExpenseById, updateExpense } from '../../utils/storage';
+import { getExpenseById, updateExpense, deleteExpense } from '../../utils/supabase-storage';
 import { EXPENSE_CATEGORIES } from '../../data/expenses';
-import { Expense } from '../../types';
+import { Expense, ExpenseCategory } from '../../types';
+import { useSession } from 'next-auth/react';
 
 const EditExpense: React.FC = () => {
   const router = useRouter();
+  const { data: session } = useSession();
   const { id } = router.query;
+  
   const [expense, setExpense] = useState<Expense | null>(null);
   const [formData, setFormData] = useState({
     categoryId: '',
-    amount: '',
+    amount: 0,
     date: '',
     description: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (id && typeof id === 'string') {
-      const expenseData = getExpenseById(id);
-      if (expenseData) {
-        setExpense(expenseData);
-        setFormData({
-          categoryId: expenseData.categoryId,
-          amount: expenseData.amount.toString(),
-          date: expenseData.date,
-          description: expenseData.description || ''
-        });
+    const loadExpense = async () => {
+      if (!session?.user?.email || !id || typeof id !== 'string') {
+        setIsLoading(false);
+        return;
       }
+
+      try {
+        const expenseId = parseInt(id);
+        const userEmail = session.user.email;
+        const foundExpense = await getExpenseById(expenseId, userEmail);
+        
+        if (foundExpense) {
+          setExpense(foundExpense);
+          setFormData({
+            categoryId: foundExpense.categoryId,
+            amount: foundExpense.amount,
+            date: foundExpense.date,
+            description: foundExpense.description || ''
+          });
+        } else {
+          router.push('/expenses');
+        }
+      } catch (error) {
+        console.error('Error loading expense:', error);
+        router.push('/expenses');
+      }
+      
       setIsLoading(false);
-    }
-  }, [id]);
+    };
+
+    loadExpense();
+  }, [id, router, session]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -43,7 +66,7 @@ const EditExpense: React.FC = () => {
       newErrors.categoryId = 'Veuillez sélectionner une catégorie';
     }
 
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+    if (!formData.amount || parseFloat(formData.amount.toString()) <= 0) {
       newErrors.amount = 'Veuillez entrer un montant valide';
     }
 
@@ -58,14 +81,14 @@ const EditExpense: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm() || !expense) {
+    if (!validateForm() || !expense || !session?.user?.email) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const selectedCategory = EXPENSE_CATEGORIES.find(cat => cat.id === formData.categoryId);
+      const selectedCategory = EXPENSE_CATEGORIES.find((cat: any) => cat.id === formData.categoryId);
       
       if (!selectedCategory) {
         setErrors({ categoryId: 'Catégorie non trouvée' });
@@ -76,13 +99,19 @@ const EditExpense: React.FC = () => {
         ...expense,
         categoryId: formData.categoryId,
         categoryName: selectedCategory.name,
-        amount: parseFloat(formData.amount),
+        amount: formData.amount,
         date: formData.date,
         description: formData.description || undefined
       };
 
-      updateExpense(expense.id, updatedExpense);
-      router.push('/history');
+      const userEmail = session.user.email;
+      const success = await updateExpense(expense.id, updatedExpense, userEmail);
+      
+      if (success) {
+        router.push('/history');
+      } else {
+        setErrors({ submit: 'Erreur lors de la modification de la dépense' });
+      }
     } catch (error) {
       console.error('Erreur lors de la modification de la dépense:', error);
       setErrors({ submit: 'Une erreur est survenue lors de la modification de la dépense' });

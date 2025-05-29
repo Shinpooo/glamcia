@@ -24,3 +24,52 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Amélioration de la visibilité des champs de formulaire */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+  color: #111827 !important; /* text-gray-900 */
+}
+
+/* Amélioration des placeholders */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important; /* text-gray-500 */
+  opacity: 1;
+}
+
+/* Styles spécifiques pour les champs de date */
+input[type="date"] {
+  color: #111827 !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  color: #6b7280;
+  opacity: 1;
+}
+
+/* Amélioration des options de select */
+select option {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+/* Focus states améliorés */
+input:focus,
+select:focus,
+textarea:focus {
+  color: #111827 !important;
+}
+
+/* Styles pour les champs désactivés */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  color: #9ca3af !important; /* text-gray-400 */
+  background-color: #f9fafb !important; /* bg-gray-50 */
+}

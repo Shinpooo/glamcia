@@ -11,29 +11,42 @@ import {
   ArrowUpDown,
   Edit3
 } from 'lucide-react';
-import { loadPrestations, deletePrestation } from '../utils/storage';
-import { Prestation } from '../types';
+import { loadPrestations, deletePrestation } from '../utils/supabase-storage';
+import { Prestation, getPrestationTotal } from '../types';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 const PrestationsPage: React.FC = () => {
+  const { data: session } = useSession();
   const [prestations, setPrestations] = useState<Prestation[]>([]);
   const [filteredPrestations, setFilteredPrestations] = useState<Prestation[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'service'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadData = () => {
-      const data = loadPrestations();
-      setPrestations(data);
-      setFilteredPrestations(data);
-      setIsLoading(false);
+    const loadData = async () => {
+      if (!session?.user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const userEmail = session.user.email;
+        const data = await loadPrestations(userEmail);
+        setPrestations(data);
+        setFilteredPrestations(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading prestations:', error);
+        setIsLoading(false);
+      }
     };
 
     loadData();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     let filtered = [...prestations];
@@ -47,8 +60,6 @@ const PrestationsPage: React.FC = () => {
       );
     }
 
-
-
     // Sort
     filtered.sort((a, b) => {
       let comparison = 0;
@@ -58,7 +69,7 @@ const PrestationsPage: React.FC = () => {
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
           break;
         case 'price':
-          comparison = a.price - b.price;
+          comparison = getPrestationTotal(a) - getPrestationTotal(b);
           break;
         case 'service':
           comparison = a.serviceName.localeCompare(b.serviceName);
@@ -71,11 +82,24 @@ const PrestationsPage: React.FC = () => {
     setFilteredPrestations(filtered);
   }, [prestations, searchTerm, sortBy, sortOrder]);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
+    if (!session?.user?.email) return;
+
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette prestation ?')) {
-      deletePrestation(id);
-      const updatedPrestations = prestations.filter(p => p.id !== id);
-      setPrestations(updatedPrestations);
+      try {
+        const userEmail = session.user.email;
+        const success = await deletePrestation(id, userEmail);
+        
+        if (success) {
+          const updatedPrestations = prestations.filter(p => p.id !== id);
+          setPrestations(updatedPrestations);
+        } else {
+          alert('Erreur lors de la suppression');
+        }
+      } catch (error) {
+        console.error('Error deleting prestation:', error);
+        alert('Erreur lors de la suppression');
+      }
     }
   };
 
@@ -88,7 +112,7 @@ const PrestationsPage: React.FC = () => {
     }
   };
 
-  const totalRevenue = filteredPrestations.reduce((sum, p) => sum + p.price, 0);
+  const totalRevenue = filteredPrestations.reduce((sum, p) => sum + getPrestationTotal(p), 0);
 
   if (isLoading) {
     return (
@@ -123,8 +147,6 @@ const PrestationsPage: React.FC = () => {
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-colors"
             />
           </div>
-
-
 
           {/* Sort */}
           <div className="flex space-x-2">
@@ -215,7 +237,7 @@ const PrestationsPage: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <Euro className="h-4 w-4" />
                       <span className="text-lg font-bold text-pink-600">
-                        {prestation.price}€
+                        {getPrestationTotal(prestation)}€
                       </span>
                     </div>
                   </div>

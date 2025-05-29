@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Save, Euro, FileText, Calendar, Tag } from 'lucide-react';
-import { addExpense, updateExpense } from '../utils/storage';
+import { addExpense, updateExpense } from '../utils/supabase-storage';
 import { EXPENSE_CATEGORIES } from '../data/expenses';
 import { Expense } from '../types';
 import FormInput from './FormInput';
 import FormSelect from './FormSelect';
 import FormTextarea from './FormTextarea';
 import Button from './Button';
+import { useSession } from 'next-auth/react';
 
 interface ExpenseFormProps {
   expense?: Expense;
@@ -20,6 +21,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onSuccess, 
   onCancel 
 }) => {
+  const { data: session } = useSession();
   const [categoryId, setCategoryId] = useState<string>(expense?.categoryId || '');
   const [amount, setAmount] = useState<number>(expense?.amount || 0);
   const [date, setDate] = useState<string>(expense?.date || format(new Date(), 'yyyy-MM-dd'));
@@ -62,10 +64,15 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       return;
     }
 
+    if (!session?.user?.email) {
+      setErrors({ submit: 'Vous devez être connecté pour ajouter une dépense' });
+      return;
+    }
+
     setIsSubmitting(true);
     
     const expenseData: Expense = {
-      id: expense?.id || Date.now().toString(),
+      id: expense?.id || 0,
       categoryId,
       categoryName: selectedCategory.name,
       amount,
@@ -74,12 +81,18 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     };
 
     try {
+      let success = false;
       if (isEditing) {
-        updateExpense(expense.id, expenseData);
+        success = await updateExpense(expense.id, expenseData, session.user.email);
       } else {
-        addExpense(expenseData);
+        success = await addExpense(expenseData, session.user.email);
       }
-      onSuccess();
+      
+      if (success) {
+        onSuccess();
+      } else {
+        setErrors({ submit: 'Erreur lors de l\'enregistrement. Vérifiez votre connexion.' });
+      }
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement de la dépense:', error);
       setErrors({ submit: 'Une erreur est survenue lors de l\'enregistrement' });

@@ -9,14 +9,16 @@ import {
   TrendingDown,
   Filter
 } from 'lucide-react';
-import { loadPrestations, deletePrestation, loadExpenses, deleteExpense, getPrestationById, getExpenseById } from '../utils/storage';
+import { loadPrestations, deletePrestation, loadExpenses, deleteExpense, getPrestationById, getExpenseById } from '../utils/supabase-storage';
 import { Prestation, Expense, Transaction } from '../types';
 import TransactionCard from '../components/TransactionCard';
 import Modal from '../components/Modal';
 import PrestationForm from '../components/PrestationForm';
 import ExpenseForm from '../components/ExpenseForm';
+import { useSession } from 'next-auth/react';
 
 const HistoryPage: React.FC = () => {
+  const { data: session } = useSession();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -30,40 +32,56 @@ const HistoryPage: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   useEffect(() => {
-    const loadData = () => {
-      const prestations = loadPrestations();
-      const expenses = loadExpenses();
-      
-      // Convert prestations to transactions
-      const revenueTransactions: Transaction[] = prestations.map(prestation => ({
-        id: prestation.id,
-        type: 'revenue' as const,
-        amount: prestation.price,
-        date: prestation.date,
-        description: prestation.serviceName,
-        category: prestation.serviceCategory,
-        notes: prestation.notes
-      }));
+    const loadData = async () => {
+      if (!session?.user?.email) {
+        setIsLoading(false);
+        return;
+      }
 
-      // Convert expenses to transactions
-      const expenseTransactions: Transaction[] = expenses.map(expense => ({
-        id: expense.id,
-        type: 'expense' as const,
-        amount: expense.amount,
-        date: expense.date,
-        description: expense.categoryName,
-        category: expense.categoryName,
-        notes: expense.description
-      }));
+      try {
+        const userEmail = session.user.email;
+        const [prestations, expenses] = await Promise.all([
+          loadPrestations(userEmail),
+          loadExpenses(userEmail)
+        ]);
+        
+        // Convert prestations to transactions
+        const revenueTransactions: Transaction[] = prestations.map(prestation => ({
+          id: prestation.id.toString(),
+          type: 'revenue' as const,
+          amount: prestation.cashAmount + prestation.cardAmount,
+          date: prestation.date,
+          description: prestation.serviceName,
+          category: prestation.serviceCategory,
+          notes: prestation.notes,
+          paymentMethod: prestation.paymentMethod,
+          cashAmount: prestation.cashAmount,
+          cardAmount: prestation.cardAmount
+        }));
 
-      const allTransactions = [...revenueTransactions, ...expenseTransactions];
-      setTransactions(allTransactions);
-      setFilteredTransactions(allTransactions);
-      setIsLoading(false);
+        // Convert expenses to transactions
+        const expenseTransactions: Transaction[] = expenses.map(expense => ({
+          id: expense.id.toString(),
+          type: 'expense' as const,
+          amount: expense.amount,
+          date: expense.date,
+          description: expense.categoryName,
+          category: expense.categoryName,
+          notes: expense.description
+        }));
+
+        const allTransactions = [...revenueTransactions, ...expenseTransactions];
+        setTransactions(allTransactions);
+        setFilteredTransactions(allTransactions);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setIsLoading(false);
+      }
     };
 
     loadData();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     let filtered = [...transactions];
@@ -110,30 +128,40 @@ const HistoryPage: React.FC = () => {
   }, [transactions, searchTerm, typeFilter, dateFilter, sortBy, sortOrder]);
 
   const handleDelete = async (transaction: Transaction) => {
+    if (!session?.user?.email) return;
+
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer cette ${transaction.type === 'revenue' ? 'prestation' : 'dépense'} ?`)) {
       try {
+        const userEmail = session.user.email;
+        const transactionId = parseInt(transaction.id);
+        
         if (transaction.type === 'revenue') {
-          deletePrestation(transaction.id);
+          await deletePrestation(transactionId, userEmail);
         } else {
-          deleteExpense(transaction.id);
+          await deleteExpense(transactionId, userEmail);
         }
         
         // Reload data
-        const prestations = loadPrestations();
-        const expenses = loadExpenses();
+        const [prestations, expenses] = await Promise.all([
+          loadPrestations(userEmail),
+          loadExpenses(userEmail)
+        ]);
         
         const revenueTransactions: Transaction[] = prestations.map(prestation => ({
-          id: prestation.id,
+          id: prestation.id.toString(),
           type: 'revenue' as const,
-          amount: prestation.price,
+          amount: prestation.cashAmount + prestation.cardAmount,
           date: prestation.date,
           description: prestation.serviceName,
           category: prestation.serviceCategory,
-          notes: prestation.notes
+          notes: prestation.notes,
+          paymentMethod: prestation.paymentMethod,
+          cashAmount: prestation.cashAmount,
+          cardAmount: prestation.cardAmount
         }));
 
         const expenseTransactions: Transaction[] = expenses.map(expense => ({
-          id: expense.id,
+          id: expense.id.toString(),
           type: 'expense' as const,
           amount: expense.amount,
           date: expense.date,
@@ -160,48 +188,69 @@ const HistoryPage: React.FC = () => {
   };
 
   const handleEdit = async (transaction: Transaction) => {
+    if (!session?.user?.email) return;
+
     setEditingTransaction(transaction);
     
-    if (transaction.type === 'revenue') {
-      const prestation = getPrestationById(transaction.id);
-      setEditingPrestation(prestation || null);
-    } else {
-      const expense = getExpenseById(transaction.id);
-      setEditingExpense(expense || null);
+    try {
+      const userEmail = session.user.email;
+      const transactionId = parseInt(transaction.id);
+      
+      if (transaction.type === 'revenue') {
+        const prestation = await getPrestationById(transactionId, userEmail);
+        setEditingPrestation(prestation || null);
+      } else {
+        const expense = await getExpenseById(transactionId, userEmail);
+        setEditingExpense(expense || null);
+      }
+    } catch (error) {
+      console.error('Error loading transaction for edit:', error);
     }
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = async () => {
+    if (!session?.user?.email) return;
+
     setEditingTransaction(null);
     setEditingPrestation(null);
     setEditingExpense(null);
     
-    // Reload data
-    const prestations = loadPrestations();
-    const expenses = loadExpenses();
-    
-    const revenueTransactions: Transaction[] = prestations.map(prestation => ({
-      id: prestation.id,
-      type: 'revenue' as const,
-      amount: prestation.price,
-      date: prestation.date,
-      description: prestation.serviceName,
-      category: prestation.serviceCategory,
-      notes: prestation.notes
-    }));
+    try {
+      // Reload data
+      const userEmail = session.user.email;
+      const [prestations, expenses] = await Promise.all([
+        loadPrestations(userEmail),
+        loadExpenses(userEmail)
+      ]);
+      
+      const revenueTransactions: Transaction[] = prestations.map(prestation => ({
+        id: prestation.id.toString(),
+        type: 'revenue' as const,
+        amount: prestation.cashAmount + prestation.cardAmount,
+        date: prestation.date,
+        description: prestation.serviceName,
+        category: prestation.serviceCategory,
+        notes: prestation.notes,
+        paymentMethod: prestation.paymentMethod,
+        cashAmount: prestation.cashAmount,
+        cardAmount: prestation.cardAmount
+      }));
 
-    const expenseTransactions: Transaction[] = expenses.map(expense => ({
-      id: expense.id,
-      type: 'expense' as const,
-      amount: expense.amount,
-      date: expense.date,
-      description: expense.categoryName,
-      category: expense.categoryName,
-      notes: expense.description
-    }));
+      const expenseTransactions: Transaction[] = expenses.map(expense => ({
+        id: expense.id.toString(),
+        type: 'expense' as const,
+        amount: expense.amount,
+        date: expense.date,
+        description: expense.categoryName,
+        category: expense.categoryName,
+        notes: expense.description
+      }));
 
-    const allTransactions = [...revenueTransactions, ...expenseTransactions];
-    setTransactions(allTransactions);
+      const allTransactions = [...revenueTransactions, ...expenseTransactions];
+      setTransactions(allTransactions);
+    } catch (error) {
+      console.error('Error reloading data after edit:', error);
+    }
   };
 
   const handleEditCancel = () => {
@@ -317,7 +366,7 @@ const HistoryPage: React.FC = () => {
                 placeholder="Rechercher par description, catégorie..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white"
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white text-gray-900 placeholder-gray-500"
               />
             </div>
 
@@ -326,10 +375,10 @@ const HistoryPage: React.FC = () => {
               <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="date"
-                placeholder="Filtrer par date..."
+                placeholder="dd/mm/yyyy"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className={`w-full pl-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white ${
+                className={`w-full pl-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white text-gray-900 ${
                   dateFilter ? 'pr-12' : 'pr-4'
                 }`}
               />
@@ -353,11 +402,11 @@ const HistoryPage: React.FC = () => {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as 'all' | 'revenue' | 'expense')}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-gray-50 focus:bg-white appearance-none"
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white text-gray-900 appearance-none"
               >
-                <option value="all">Toutes les transactions</option>
-                <option value="revenue">Revenus uniquement</option>
-                <option value="expense">Dépenses uniquement</option>
+                <option value="all" className="text-gray-900">Toutes les transactions</option>
+                <option value="revenue" className="text-gray-900">Revenus uniquement</option>
+                <option value="expense" className="text-gray-900">Dépenses uniquement</option>
               </select>
             </div>
 
@@ -368,7 +417,7 @@ const HistoryPage: React.FC = () => {
                 className={`flex items-center justify-center space-x-1 px-4 py-3 rounded-xl text-sm font-medium transition-all flex-1 ${
                   sortBy === 'date' 
                     ? 'bg-pink-100 text-pink-700 shadow-sm' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <Calendar className="h-4 w-4" />
@@ -380,7 +429,7 @@ const HistoryPage: React.FC = () => {
                 className={`flex items-center justify-center space-x-1 px-4 py-3 rounded-xl text-sm font-medium transition-all flex-1 ${
                   sortBy === 'amount' 
                     ? 'bg-pink-100 text-pink-700 shadow-sm' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <Euro className="h-4 w-4" />

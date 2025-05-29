@@ -4,18 +4,33 @@ export interface Service {
   name: string;
 }
 
+export type PaymentMethod = 'cash' | 'card' | 'mixed';
+
+export interface PaymentDetails {
+  method: PaymentMethod;
+  cashAmount: number;
+  cardAmount: number;
+}
+
 export interface Prestation {
-  id: string;
+  id: number;
   serviceId: string;
   serviceName: string;
   serviceCategory: string;
-  price: number;
   date: string;
   notes?: string;
+  paymentMethod: PaymentMethod;
+  cashAmount: number;
+  cardAmount: number;
 }
 
+// Helper function to get total price
+export const getPrestationTotal = (prestation: Prestation): number => {
+  return prestation.cashAmount + prestation.cardAmount;
+};
+
 export interface Expense {
-  id: string;
+  id: number;
   categoryId: string;
   categoryName: string;
   amount: number;
@@ -33,6 +48,11 @@ export interface DailyStats {
   totalRevenue: number;
   prestationCount: number;
   prestations: Prestation[];
+  totalCash: number;
+  totalCard: number;
+  cashPayments: number;
+  cardPayments: number;
+  mixedPayments: number;
 }
 
 export interface DailyExpenseStats {
@@ -40,6 +60,15 @@ export interface DailyExpenseStats {
   totalExpenses: number;
   expenseCount: number;
   expenses: Expense[];
+}
+
+export interface PaymentMethodStats {
+  method: PaymentMethod;
+  transactionCount: number;
+  totalAmount: number;
+  totalCash: number;
+  totalCard: number;
+  averageAmount: number;
 }
 
 export interface Transaction {
@@ -50,4 +79,7 @@ export interface Transaction {
   description: string;
   category: string;
   notes?: string;
+  paymentMethod?: PaymentMethod;
+  cashAmount?: number;
+  cardAmount?: number;
 } 

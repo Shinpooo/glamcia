@@ -36,8 +36,10 @@ import {
   isFuture
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { loadPrestations, loadExpenses } from '../utils/storage';
-import { TrendingUp, TrendingDown, Calendar, Clock, BarChart3, ChevronLeft, ChevronRight, RotateCcw, CalendarDays } from 'lucide-react';
+import { loadPrestations, loadExpenses } from '../utils/supabase-storage';
+import { TrendingUp, TrendingDown, Calendar, Clock, BarChart3, ChevronLeft, ChevronRight, RotateCcw, CalendarDays, CreditCard, Banknote, DollarSign } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { getPrestationTotal } from '../types';
 
 ChartJS.register(
   CategoryScale,
@@ -53,21 +55,34 @@ ChartJS.register(
 );
 
 type TimeUnit = 'day' | 'week' | 'month' | 'year';
+type PaymentFilter = 'total' | 'cash' | 'card';
 
 interface TimeData {
   period: string;
   periodLabel: string;
   prestations: { [category: string]: number };
+  prestationsCash: { [category: string]: number };
+  prestationsCard: { [category: string]: number };
   expenses: { [category: string]: number };
   totalRevenue: number;
+  totalCashRevenue: number;
+  totalCardRevenue: number;
   totalExpenses: number;
   netProfit: number;
+  netCashProfit: number;
+  netCardProfit: number;
 }
 
 const TimeChart: React.FC = () => {
+  const { data: session } = useSession();
   const [timeUnit, setTimeUnit] = useState<TimeUnit>('week');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('total');
   const [currentPeriod, setCurrentPeriod] = useState<Date>(new Date());
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [timeData, setTimeData] = useState<TimeData[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [chartData, setChartData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Handle window resize for responsive chart
   useEffect(() => {
@@ -82,190 +97,255 @@ const TimeChart: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const { timeData, chartData } = useMemo(() => {
-    const prestations = loadPrestations();
-    const expenses = loadExpenses();
-    
-    // Calculer la plage de dates selon l'unité de temps et la période courante
-    const endDate = new Date(currentPeriod);
-    const startDate = new Date(currentPeriod);
-    let intervals: Date[] = [];
-    
-    switch (timeUnit) {
-      case 'day':
-        // Reduce data points on mobile for better performance
-        const dayCount = isMobile ? 7 : 14;
-        startDate.setDate(endDate.getDate() - (dayCount - 1));
-        intervals = eachDayOfInterval({ start: startDate, end: endDate });
-        break;
-      case 'week':
-        // Reduce data points on mobile for better performance
-        const weekCount = isMobile ? 6 : 8;
-        startDate.setDate(endDate.getDate() - (weekCount * 7));
-        intervals = eachWeekOfInterval(
-          { start: startDate, end: endDate },
-          { weekStartsOn: 1 }
-        );
-        break;
-      case 'month':
-        // Reduce data points on mobile for better performance
-        const monthCount = isMobile ? 6 : 12;
-        startDate.setMonth(endDate.getMonth() - (monthCount - 1));
-        intervals = eachMonthOfInterval({ start: startDate, end: endDate });
-        break;
-      case 'year':
-        // Keep same for years as it's already minimal
-        startDate.setFullYear(endDate.getFullYear() - 4); // 5 années
-        intervals = eachYearOfInterval({ start: startDate, end: endDate });
-        break;
-    }
-    
-    const timeData = intervals.map(intervalStart => {
-      let intervalEnd: Date;
-      let periodLabel: string;
-      
-      switch (timeUnit) {
-        case 'day':
-          intervalEnd = intervalStart;
-          periodLabel = format(intervalStart, 'd MMM', { locale: fr });
-          break;
-        case 'week':
-          intervalEnd = endOfWeek(intervalStart, { weekStartsOn: 1 });
-          periodLabel = `${format(intervalStart, 'd MMM', { locale: fr })}`;
-          break;
-        case 'month':
-          intervalEnd = endOfMonth(intervalStart);
-          periodLabel = format(intervalStart, 'MMM yyyy', { locale: fr });
-          break;
-        case 'year':
-          intervalEnd = endOfYear(intervalStart);
-          periodLabel = format(intervalStart, 'yyyy', { locale: fr });
-          break;
+  // Load data when timeUnit or currentPeriod changes
+  useEffect(() => {
+    const loadData = async () => {
+      if (!session?.user?.email) {
+        setIsLoading(false);
+        return;
       }
-      
-      const timeDataItem: TimeData = {
-        period: format(intervalStart, 'yyyy-MM-dd'),
-        periodLabel,
-        prestations: {
-          'Manucure': 0,
-          'Pédicure': 0,
-          'Spray-Tanning': 0,
-          'Blanchiment dentaire': 0,
-          'Soins': 0,
-          'Lissages': 0,
-        },
-        expenses: {
-          'Fournisseur ongle': 0,
-          'Fournisseur cheveux': 0,
-          'Fournisseur spray tan': 0,
-          'Fournisseur blanchiment': 0,
-          'Aménagement du salon': 0,
-          'Divers': 0,
-        },
-        totalRevenue: 0,
-        totalExpenses: 0,
-        netProfit: 0
-      };
-      
-      // Agréger les prestations de la période
-      prestations.forEach(prestation => {
-        const prestationDate = parseISO(prestation.date);
-        if (isWithinInterval(prestationDate, { start: intervalStart, end: intervalEnd })) {
-          timeDataItem.prestations[prestation.serviceCategory] += prestation.price;
-          timeDataItem.totalRevenue += prestation.price;
+
+      setIsLoading(true);
+      try {
+        const userEmail = session.user.email;
+        const [prestations, expenses] = await Promise.all([
+          loadPrestations(userEmail),
+          loadExpenses(userEmail)
+        ]);
+        
+        // Calculer la plage de dates selon l'unité de temps et la période courante
+        const endDate = new Date(currentPeriod);
+        const startDate = new Date(currentPeriod);
+        let intervals: Date[] = [];
+        
+        switch (timeUnit) {
+          case 'day':
+            // Reduce data points on mobile for better performance
+            const dayCount = isMobile ? 7 : 14;
+            startDate.setDate(endDate.getDate() - (dayCount - 1));
+            intervals = eachDayOfInterval({ start: startDate, end: endDate });
+            break;
+          case 'week':
+            // Reduce data points on mobile for better performance
+            const weekCount = isMobile ? 6 : 8;
+            startDate.setDate(endDate.getDate() - (weekCount * 7));
+            intervals = eachWeekOfInterval(
+              { start: startDate, end: endDate },
+              { weekStartsOn: 1 }
+            );
+            break;
+          case 'month':
+            // Reduce data points on mobile for better performance
+            const monthCount = isMobile ? 6 : 12;
+            startDate.setMonth(endDate.getMonth() - (monthCount - 1));
+            intervals = eachMonthOfInterval({ start: startDate, end: endDate });
+            break;
+          case 'year':
+            // Keep same for years as it's already minimal
+            startDate.setFullYear(endDate.getFullYear() - 4); // 5 années
+            intervals = eachYearOfInterval({ start: startDate, end: endDate });
+            break;
         }
-      });
-      
-      // Agréger les dépenses de la période
-      expenses.forEach(expense => {
-        const expenseDate = parseISO(expense.date);
-        if (isWithinInterval(expenseDate, { start: intervalStart, end: intervalEnd })) {
-          timeDataItem.expenses[expense.categoryName] += expense.amount;
-          timeDataItem.totalExpenses += expense.amount;
-        }
-      });
-      
-      timeDataItem.netProfit = timeDataItem.totalRevenue - timeDataItem.totalExpenses;
-      
-      return timeDataItem;
-    });
+        
+        const newTimeData = intervals.map(intervalStart => {
+          let intervalEnd: Date;
+          let periodLabel: string;
+          
+          switch (timeUnit) {
+            case 'day':
+              intervalEnd = intervalStart;
+              periodLabel = format(intervalStart, 'd MMM', { locale: fr });
+              break;
+            case 'week':
+              intervalEnd = endOfWeek(intervalStart, { weekStartsOn: 1 });
+              periodLabel = `${format(intervalStart, 'd MMM', { locale: fr })}`;
+              break;
+            case 'month':
+              intervalEnd = endOfMonth(intervalStart);
+              periodLabel = format(intervalStart, 'MMM yyyy', { locale: fr });
+              break;
+            case 'year':
+              intervalEnd = endOfYear(intervalStart);
+              periodLabel = format(intervalStart, 'yyyy', { locale: fr });
+              break;
+          }
+          
+          const timeDataItem: TimeData = {
+            period: format(intervalStart, 'yyyy-MM-dd'),
+            periodLabel,
+            prestations: {
+              'Manucure': 0,
+              'Pédicure': 0,
+              'Spray-Tanning': 0,
+              'Blanchiment dentaire': 0,
+              'Soins': 0,
+              'Lissages': 0,
+            },
+            prestationsCash: {
+              'Manucure': 0,
+              'Pédicure': 0,
+              'Spray-Tanning': 0,
+              'Blanchiment dentaire': 0,
+              'Soins': 0,
+              'Lissages': 0,
+            },
+            prestationsCard: {
+              'Manucure': 0,
+              'Pédicure': 0,
+              'Spray-Tanning': 0,
+              'Blanchiment dentaire': 0,
+              'Soins': 0,
+              'Lissages': 0,
+            },
+            expenses: {
+              'Fournisseur ongle': 0,
+              'Fournisseur cheveux': 0,
+              'Fournisseur spray tan': 0,
+              'Fournisseur blanchiment': 0,
+              'Aménagement du salon': 0,
+              'Divers': 0,
+            },
+            totalRevenue: 0,
+            totalCashRevenue: 0,
+            totalCardRevenue: 0,
+            totalExpenses: 0,
+            netProfit: 0,
+            netCashProfit: 0,
+            netCardProfit: 0
+          };
+          
+          // Agréger les prestations de la période
+          prestations.forEach(prestation => {
+            const prestationDate = parseISO(prestation.date);
+            if (isWithinInterval(prestationDate, { start: intervalStart, end: intervalEnd })) {
+              const total = getPrestationTotal(prestation);
+              timeDataItem.prestations[prestation.serviceCategory] += total;
+              timeDataItem.totalRevenue += total;
+              
+              // Ajouter les montants cash et card séparément
+              timeDataItem.prestationsCash[prestation.serviceCategory] += prestation.cashAmount;
+              timeDataItem.totalCashRevenue += prestation.cashAmount;
+              
+              timeDataItem.prestationsCard[prestation.serviceCategory] += prestation.cardAmount;
+              timeDataItem.totalCardRevenue += prestation.cardAmount;
+            }
+          });
+          
+          // Agréger les dépenses de la période
+          expenses.forEach(expense => {
+            const expenseDate = parseISO(expense.date);
+            if (isWithinInterval(expenseDate, { start: intervalStart, end: intervalEnd })) {
+              timeDataItem.expenses[expense.categoryName] += expense.amount;
+              timeDataItem.totalExpenses += expense.amount;
+            }
+          });
+          
+          timeDataItem.netProfit = timeDataItem.totalRevenue - timeDataItem.totalExpenses;
+          timeDataItem.netCashProfit = timeDataItem.totalCashRevenue - timeDataItem.totalExpenses;
+          timeDataItem.netCardProfit = timeDataItem.totalCardRevenue - timeDataItem.totalExpenses;
+          
+          return timeDataItem;
+        });
 
-    // Préparer les données pour Chart.js
-    const labels = timeData.map(data => data.periodLabel);
-    
-    // Couleurs pour les prestations (tons chauds)
-    const prestationColors = {
-      'Manucure': 'rgba(236, 72, 153, 0.8)',
-      'Pédicure': 'rgba(249, 115, 22, 0.8)',
-      'Spray-Tanning': 'rgba(234, 179, 8, 0.8)',
-      'Blanchiment dentaire': 'rgba(6, 182, 212, 0.8)',
-      'Soins': 'rgba(16, 185, 129, 0.8)',
-      'Lissages': 'rgba(139, 92, 246, 0.8)',
+        // Préparer les données pour Chart.js
+        const labels = newTimeData.map(data => data.periodLabel);
+        
+        // Couleurs pour les prestations (tons chauds)
+        const prestationColors = {
+          'Manucure': 'rgba(236, 72, 153, 0.8)',
+          'Pédicure': 'rgba(249, 115, 22, 0.8)',
+          'Spray-Tanning': 'rgba(234, 179, 8, 0.8)',
+          'Blanchiment dentaire': 'rgba(6, 182, 212, 0.8)',
+          'Soins': 'rgba(16, 185, 129, 0.8)',
+          'Lissages': 'rgba(139, 92, 246, 0.8)',
+        };
+
+        // Couleurs pour les dépenses (palette diversifiée)
+        const expenseColors = {
+          'Fournisseur ongle': 'rgba(239, 68, 68, 0.8)',     // Rouge
+          'Fournisseur cheveux': 'rgba(168, 85, 247, 0.8)',  // Violet
+          'Fournisseur spray tan': 'rgba(245, 158, 11, 0.8)', // Ambre
+          'Fournisseur blanchiment': 'rgba(59, 130, 246, 0.8)', // Bleu
+          'Aménagement du salon': 'rgba(156, 163, 175, 0.8)', // Gris
+          'Divers': 'rgba(107, 114, 128, 0.8)',              // Gris foncé
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const datasets: any[] = [];
+
+        // Datasets pour les prestations (valeurs positives) - selon le filtre de paiement
+        const prestationData = paymentFilter === 'cash' 
+          ? newTimeData.map(data => data.prestationsCash)
+          : paymentFilter === 'card'
+          ? newTimeData.map(data => data.prestationsCard)
+          : newTimeData.map(data => data.prestations);
+
+        Object.keys(prestationColors).forEach(category => {
+          datasets.push({
+            label: category,
+            data: prestationData.map(data => data[category] || 0),
+            backgroundColor: prestationColors[category as keyof typeof prestationColors],
+            borderColor: prestationColors[category as keyof typeof prestationColors].replace('0.8', '1'),
+            borderWidth: 1,
+            stack: 'revenue',
+          });
+        });
+
+        // Datasets pour les dépenses (valeurs négatives) - inchangé
+        Object.keys(expenseColors).forEach(category => {
+          datasets.push({
+            label: category,
+            data: newTimeData.map(data => -(data.expenses[category] || 0)),
+            backgroundColor: expenseColors[category as keyof typeof expenseColors],
+            borderColor: expenseColors[category as keyof typeof expenseColors].replace('0.8', '1'),
+            borderWidth: 1,
+            stack: 'expenses',
+          });
+        });
+
+        // Dataset pour la ligne de profit - selon le filtre de paiement
+        const profitData = paymentFilter === 'cash'
+          ? newTimeData.map(data => data.netCashProfit)
+          : paymentFilter === 'card'
+          ? newTimeData.map(data => data.netCardProfit)
+          : newTimeData.map(data => data.netProfit);
+
+        datasets.push({
+          label: 'Évolution du profit',
+          data: profitData,
+          type: 'line',
+          borderColor: 'rgba(34, 197, 94, 1)',
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: profitData.map(profit => 
+            profit >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)'
+          ),
+          pointBorderColor: profitData.map(profit => 
+            profit >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)'
+          ),
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.4,
+          fill: false,
+          yAxisID: 'y',
+        });
+
+        const newChartData = {
+          labels,
+          datasets,
+        };
+
+        setTimeData(newTimeData);
+        setChartData(newChartData);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading chart data:', error);
+        setIsLoading(false);
+      }
     };
 
-    // Couleurs pour les dépenses (palette diversifiée)
-    const expenseColors = {
-      'Fournisseur ongle': 'rgba(239, 68, 68, 0.8)',     // Rouge
-      'Fournisseur cheveux': 'rgba(168, 85, 247, 0.8)',  // Violet
-      'Fournisseur spray tan': 'rgba(245, 158, 11, 0.8)', // Ambre
-      'Fournisseur blanchiment': 'rgba(59, 130, 246, 0.8)', // Bleu
-      'Aménagement du salon': 'rgba(156, 163, 175, 0.8)', // Gris
-      'Divers': 'rgba(107, 114, 128, 0.8)',              // Gris foncé
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const datasets: any[] = [];
-
-    // Datasets pour les prestations (valeurs positives)
-    Object.keys(prestationColors).forEach(category => {
-      datasets.push({
-        label: category,
-        data: timeData.map(data => data.prestations[category] || 0),
-        backgroundColor: prestationColors[category as keyof typeof prestationColors],
-        borderColor: prestationColors[category as keyof typeof prestationColors].replace('0.8', '1'),
-        borderWidth: 1,
-        stack: 'revenue',
-      });
-    });
-
-    // Datasets pour les dépenses (valeurs négatives)
-    Object.keys(expenseColors).forEach(category => {
-      datasets.push({
-        label: category,
-        data: timeData.map(data => -(data.expenses[category] || 0)), // Négatif pour les dépenses
-        backgroundColor: expenseColors[category as keyof typeof expenseColors],
-        borderColor: expenseColors[category as keyof typeof expenseColors].replace('0.8', '1'),
-        borderWidth: 1,
-        stack: 'expenses',
-        type: 'bar',
-      });
-    });
-
-    // Ligne de série temporelle pour le bénéfice net
-    datasets.push({
-      label: 'Bénéfice Net',
-      data: timeData.map(data => data.netProfit),
-      type: 'line',
-      borderColor: '#059669', // Emerald-600
-      backgroundColor: 'rgba(5, 150, 105, 0.1)',
-      borderWidth: 3,
-      pointBackgroundColor: timeData.map(data => data.netProfit >= 0 ? '#10b981' : '#ef4444'), // Vert si positif, rouge si négatif
-      pointBorderColor: timeData.map(data => data.netProfit >= 0 ? '#059669' : '#dc2626'),
-      pointBorderWidth: 2,
-      pointRadius: 6,
-      pointHoverRadius: 8,
-      fill: false,
-      tension: 0.4, // Courbe lisse
-      yAxisID: 'y', // Même axe Y que les barres
-    });
-
-    const chartData = {
-      labels,
-      datasets,
-    };
-
-    return { timeData, chartData };
-  }, [timeUnit, currentPeriod, isMobile]);
+    loadData();
+  }, [timeUnit, currentPeriod, isMobile, session, paymentFilter]);
 
   const options: ChartOptions<'bar'> = useMemo(() => ({
     responsive: true,
@@ -292,20 +372,41 @@ const TimeChart: React.FC = () => {
           afterTitle: (context) => {
             const periodIndex = context[0].dataIndex;
             const period = timeData[periodIndex];
+            const currentRevenue = paymentFilter === 'cash' 
+              ? period.totalCashRevenue 
+              : paymentFilter === 'card'
+              ? period.totalCardRevenue
+              : period.totalRevenue;
+            const currentProfit = paymentFilter === 'cash'
+              ? period.netCashProfit
+              : paymentFilter === 'card'
+              ? period.netCardProfit
+              : period.netProfit;
+            
+            const filterConfig = getPaymentFilterConfig(paymentFilter);
             return [
-              `Revenus: +${period.totalRevenue}€`,
+              `Revenus (${filterConfig.description}): +${currentRevenue}€`,
               `Dépenses: -${period.totalExpenses}€`,
-              `Bénéfice: ${period.netProfit >= 0 ? '+' : ''}${period.netProfit}€`
+              `Bénéfice (${filterConfig.description}): ${currentProfit >= 0 ? '+' : ''}${currentProfit}€`
             ];
           },
           label: (context) => {
-            if (context.dataset.label === 'Bénéfice Net') {
+            if (context.dataset.label === 'Évolution du profit') {
               const value = context.parsed.y;
-              return `Bénéfice Net: ${value >= 0 ? '+' : ''}${value}€`;
+              return `Évolution du profit: ${value >= 0 ? '+' : ''}${value}€`;
             }
             const value = Math.abs(context.parsed.y);
             if (value === 0) return;
             return `${context.dataset.label}: ${context.parsed.y < 0 ? '-' : '+'}${value}€`;
+          },
+          labelColor: (context) => {
+            // Retourner la couleur du dataset pour l'affichage dans le tooltip
+            return {
+              borderColor: context.dataset.borderColor as string,
+              backgroundColor: context.dataset.backgroundColor as string,
+              borderWidth: 2,
+              borderRadius: 2,
+            };
           },
         },
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -321,7 +422,10 @@ const TimeChart: React.FC = () => {
         bodyFont: {
           size: isMobile ? 11 : 13,
         },
-        displayColors: false, // Hide color boxes on mobile for cleaner look
+        displayColors: true, // Afficher les couleurs dans le tooltip
+        usePointStyle: true, // Utiliser des points au lieu de rectangles
+        boxWidth: isMobile ? 8 : 12,
+        boxHeight: isMobile ? 8 : 12,
       },
     },
     scales: {
@@ -387,7 +491,7 @@ const TimeChart: React.FC = () => {
         borderWidth: isMobile ? 2 : 3,
       },
     },
-  }), [timeData, timeUnit, isMobile]);
+  }), [timeData, timeUnit, isMobile, paymentFilter]);
 
   // Créer les légendes séparées
   const prestationCategories = ['Manucure', 'Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins', 'Lissages'];
@@ -409,6 +513,29 @@ const TimeChart: React.FC = () => {
     'Fournisseur blanchiment': '#3b82f6', // Bleu
     'Aménagement du salon': '#9ca3af',  // Gris
     'Divers': '#6b7280',               // Gris foncé
+  };
+
+  const getPaymentFilterConfig = (filter: PaymentFilter) => {
+    switch (filter) {
+      case 'total':
+        return {
+          label: 'Total',
+          icon: DollarSign,
+          description: 'Tous les paiements'
+        };
+      case 'cash':
+        return {
+          label: 'Espèces',
+          icon: Banknote,
+          description: 'Paiements en espèces'
+        };
+      case 'card':
+        return {
+          label: 'Carte',
+          icon: CreditCard,
+          description: 'Paiements par carte'
+        };
+    }
   };
 
   const getTimeUnitConfig = (unit: TimeUnit) => {
@@ -537,37 +664,64 @@ const TimeChart: React.FC = () => {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-6">
       <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
-        {/* Header avec titre et toggle */}
+        {/* Header avec titre et toggles */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="text-center sm:text-left">
             <h3 className="text-lg sm:text-xl font-bold text-gray-900">Analyse Temporelle</h3>
-            <p className="text-sm sm:text-base text-gray-600">Revenus vs Dépenses ({currentConfig.period})</p>
+            <p className="text-sm sm:text-base text-gray-600">
+              Revenus vs Dépenses ({currentConfig.period}) - {getPaymentFilterConfig(paymentFilter).description}
+            </p>
           </div>
           
-          {/* Toggle pour l'unité de temps - Mobile optimized */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mx-auto sm:mx-0">
-            {(['day', 'week', 'month', 'year'] as TimeUnit[]).map((unit) => {
-              const config = getTimeUnitConfig(unit);
-              const Icon = config.icon;
-              return (
-                <button
-                  key={unit}
-                  onClick={() => {
-                    setTimeUnit(unit);
-                    setCurrentPeriod(new Date()); // Reset à aujourd'hui quand on change d'unité
-                  }}
-                  className={`flex items-center justify-center space-x-1 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-w-0 ${
-                    timeUnit === unit
-                      ? 'bg-white text-pink-700 shadow-sm'
-                      : 'text-gray-600 hover:text-pink-600'
-                  }`}
-                >
-                  <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <span className="hidden sm:inline">{config.label}</span>
-                  <span className="sm:hidden text-xs">{config.label.charAt(0)}</span>
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            {/* Toggle pour l'unité de temps */}
+            <div className="flex bg-gray-100 rounded-xl p-1 mx-auto sm:mx-0">
+              {(['day', 'week', 'month', 'year'] as TimeUnit[]).map((unit) => {
+                const config = getTimeUnitConfig(unit);
+                const Icon = config.icon;
+                return (
+                  <button
+                    key={unit}
+                    onClick={() => {
+                      setTimeUnit(unit);
+                      setCurrentPeriod(new Date()); // Reset à aujourd'hui quand on change d'unité
+                    }}
+                    className={`flex items-center justify-center space-x-1 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-w-0 ${
+                      timeUnit === unit
+                        ? 'bg-white text-pink-700 shadow-sm'
+                        : 'text-gray-600 hover:text-pink-600'
+                    }`}
+                  >
+                    <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">{config.label}</span>
+                    <span className="sm:hidden text-xs">{config.label.charAt(0)}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Toggle pour le filtre de paiement */}
+            <div className="flex bg-blue-100 rounded-xl p-1 mx-auto sm:mx-0">
+              {(['total', 'cash', 'card'] as PaymentFilter[]).map((filter) => {
+                const config = getPaymentFilterConfig(filter);
+                const Icon = config.icon;
+                return (
+                  <button
+                    key={filter}
+                    onClick={() => setPaymentFilter(filter)}
+                    className={`flex items-center justify-center space-x-1 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-w-0 ${
+                      paymentFilter === filter
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-gray-600 hover:text-blue-600'
+                    }`}
+                  >
+                    <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">{config.label}</span>
+                    <span className="sm:hidden text-xs">{config.label.charAt(0)}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -675,20 +829,42 @@ const TimeChart: React.FC = () => {
       
       {/* Graphique - Mobile optimized */}
       <div className="h-64 sm:h-80 lg:h-96 relative bg-gray-50 rounded-xl p-2 sm:p-4">
-        <Chart type="bar" data={chartData} options={options} />
-        
-        {/* Ligne de référence zéro */}
-        <div className="absolute inset-0 pointer-events-none flex items-center">
-          <div className="w-full h-px bg-gray-400 opacity-30 sm:opacity-50"></div>
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+          </div>
+        ) : chartData ? (
+          <>
+            <Chart type="bar" data={chartData} options={options} />
+            
+            {/* Ligne de référence zéro */}
+            <div className="absolute inset-0 pointer-events-none flex items-center">
+              <div className="w-full h-px bg-gray-400 opacity-30 sm:opacity-50"></div>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Aucune donnée disponible</p>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Résumé des totaux - Mobile optimized */}
       <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
-          <p className="text-xs sm:text-sm text-green-600 font-medium">Total Revenus</p>
+          <p className="text-xs sm:text-sm text-green-600 font-medium">
+            Total Revenus ({getPaymentFilterConfig(paymentFilter).label})
+          </p>
           <p className="text-base sm:text-lg font-bold text-green-700">
-            +{timeData.reduce((sum, period) => sum + period.totalRevenue, 0)}€
+            +{paymentFilter === 'cash' 
+              ? timeData.reduce((sum, period) => sum + period.totalCashRevenue, 0)
+              : paymentFilter === 'card'
+              ? timeData.reduce((sum, period) => sum + period.totalCardRevenue, 0)
+              : timeData.reduce((sum, period) => sum + period.totalRevenue, 0)
+            }€
           </p>
         </div>
         <div className="text-center p-3 sm:p-4 bg-red-50 rounded-lg">
@@ -698,14 +874,31 @@ const TimeChart: React.FC = () => {
           </p>
         </div>
         <div className="text-center p-3 sm:p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs sm:text-sm text-gray-600 font-medium">Bénéfice Net</p>
+          <p className="text-xs sm:text-sm text-gray-600 font-medium">
+            Bénéfice Net ({getPaymentFilterConfig(paymentFilter).label})
+          </p>
           <p className={`text-base sm:text-lg font-bold ${
-            timeData.reduce((sum, period) => sum + period.netProfit, 0) >= 0 
+            (paymentFilter === 'cash' 
+              ? timeData.reduce((sum, period) => sum + period.netCashProfit, 0)
+              : paymentFilter === 'card'
+              ? timeData.reduce((sum, period) => sum + period.netCardProfit, 0)
+              : timeData.reduce((sum, period) => sum + period.netProfit, 0)
+            ) >= 0 
               ? 'text-green-700' 
               : 'text-red-700'
           }`}>
-            {timeData.reduce((sum, period) => sum + period.netProfit, 0) >= 0 ? '+' : ''}
-            {timeData.reduce((sum, period) => sum + period.netProfit, 0)}€
+            {(paymentFilter === 'cash' 
+              ? timeData.reduce((sum, period) => sum + period.netCashProfit, 0)
+              : paymentFilter === 'card'
+              ? timeData.reduce((sum, period) => sum + period.netCardProfit, 0)
+              : timeData.reduce((sum, period) => sum + period.netProfit, 0)
+            ) >= 0 ? '+' : ''}
+            {paymentFilter === 'cash' 
+              ? timeData.reduce((sum, period) => sum + period.netCashProfit, 0)
+              : paymentFilter === 'card'
+              ? timeData.reduce((sum, period) => sum + period.netCardProfit, 0)
+              : timeData.reduce((sum, period) => sum + period.netProfit, 0)
+            }€
           </p>
         </div>
       </div>

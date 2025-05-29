@@ -9,16 +9,21 @@ import {
   Trash2,
   TrendingUp,
   TrendingDown,
-  Edit3
+  Edit3,
+  CreditCard,
+  Banknote,
+  DollarSign
 } from 'lucide-react';
 
-import { getCombinedDailyStats, deletePrestation, deleteExpense, CombinedDailyStats, getPrestationById, getExpenseById } from '../utils/storage';
+import { getCombinedDailyStats, deletePrestation, deleteExpense, CombinedDailyStats, getPrestationById, getExpenseById } from '../utils/supabase-storage';
 import Modal from '../components/Modal';
 import PrestationForm from '../components/PrestationForm';
 import ExpenseForm from '../components/ExpenseForm';
-import { Prestation, Expense } from '../types';
+import { Prestation, Expense, getPrestationTotal } from '../types';
+import { useSession } from 'next-auth/react';
 
 const CalendarPage: React.FC = () => {
+  const { data: session } = useSession();
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [dailyStats, setDailyStats] = useState<CombinedDailyStats[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -27,14 +32,25 @@ const CalendarPage: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   useEffect(() => {
-    const loadData = () => {
-      const stats = getCombinedDailyStats();
-      setDailyStats(stats);
-      setIsLoading(false);
+    const loadData = async () => {
+      if (!session?.user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const userEmail = session.user.email;
+        const stats = await getCombinedDailyStats(userEmail);
+        setDailyStats(stats);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading calendar data:', error);
+        setIsLoading(false);
+      }
     };
 
     loadData();
-  }, []);
+  }, [session]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -61,44 +77,80 @@ const CalendarPage: React.FC = () => {
 
   const selectedDayStats = selectedDate ? getDayStats(selectedDate) : null;
 
-  const handleDeletePrestation = (prestationId: string) => {
+  const handleDeletePrestation = async (prestationId: number) => {
+    if (!session?.user?.email) return;
+
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette prestation ?')) {
-      deletePrestation(prestationId);
-      // Reload data to refresh the calendar
-      const stats = getCombinedDailyStats();
-      setDailyStats(stats);
+      try {
+        const userEmail = session.user.email;
+        await deletePrestation(prestationId, userEmail);
+        // Reload data to refresh the calendar
+        const stats = await getCombinedDailyStats(userEmail);
+        setDailyStats(stats);
+      } catch (error) {
+        console.error('Error deleting prestation:', error);
+      }
     }
   };
 
-  const handleDeleteExpense = (expenseId: string) => {
+  const handleDeleteExpense = async (expenseId: number) => {
+    if (!session?.user?.email) return;
+
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette dépense ?')) {
-      deleteExpense(expenseId);
-      // Reload data to refresh the calendar
-      const stats = getCombinedDailyStats();
-      setDailyStats(stats);
+      try {
+        const userEmail = session.user.email;
+        await deleteExpense(expenseId, userEmail);
+        // Reload data to refresh the calendar
+        const stats = await getCombinedDailyStats(userEmail);
+        setDailyStats(stats);
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+      }
     }
   };
 
-  const handleEditPrestation = (prestationId: string) => {
-    const prestation = getPrestationById(prestationId);
-    if (prestation) {
-      setEditingPrestation(prestation);
+  const handleEditPrestation = async (prestationId: number) => {
+    if (!session?.user?.email) return;
+
+    try {
+      const userEmail = session.user.email;
+      const prestation = await getPrestationById(prestationId, userEmail);
+      if (prestation) {
+        setEditingPrestation(prestation);
+      }
+    } catch (error) {
+      console.error('Error loading prestation for edit:', error);
     }
   };
 
-  const handleEditExpense = (expenseId: string) => {
-    const expense = getExpenseById(expenseId);
-    if (expense) {
-      setEditingExpense(expense);
+  const handleEditExpense = async (expenseId: number) => {
+    if (!session?.user?.email) return;
+
+    try {
+      const userEmail = session.user.email;
+      const expense = await getExpenseById(expenseId, userEmail);
+      if (expense) {
+        setEditingExpense(expense);
+      }
+    } catch (error) {
+      console.error('Error loading expense for edit:', error);
     }
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = async () => {
+    if (!session?.user?.email) return;
+
     setEditingPrestation(null);
     setEditingExpense(null);
-    // Reload data to refresh the calendar
-    const stats = getCombinedDailyStats();
-    setDailyStats(stats);
+    
+    try {
+      // Reload data to refresh the calendar
+      const userEmail = session.user.email;
+      const stats = await getCombinedDailyStats(userEmail);
+      setDailyStats(stats);
+    } catch (error) {
+      console.error('Error reloading data after edit:', error);
+    }
   };
 
   const handleEditCancel = () => {
@@ -284,6 +336,31 @@ const CalendarPage: React.FC = () => {
                         <div className="text-xs text-gray-500">
                           {selectedDayStats.prestationCount} prestation{selectedDayStats.prestationCount > 1 ? 's' : ''}
                         </div>
+                        {/* Détail des paiements */}
+                        {selectedDayStats.prestations.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {(() => {
+                              const totalCash = selectedDayStats.prestations.reduce((sum, p) => sum + p.cashAmount, 0);
+                              const totalCard = selectedDayStats.prestations.reduce((sum, p) => sum + p.cardAmount, 0);
+                              return (
+                                <>
+                                  {totalCash > 0 && (
+                                    <div className="flex items-center space-x-1 text-xs text-gray-600">
+                                      <Banknote className="h-3 w-3" />
+                                      <span>Espèces: {totalCash}€</span>
+                                    </div>
+                                  )}
+                                  {totalCard > 0 && (
+                                    <div className="flex items-center space-x-1 text-xs text-gray-600">
+                                      <CreditCard className="h-3 w-3" />
+                                      <span>Carte: {totalCard}€</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <span className="text-gray-600">Dépenses:</span>
@@ -317,22 +394,72 @@ const CalendarPage: React.FC = () => {
                       {selectedDayStats.prestations.map((prestation) => (
                         <div
                           key={prestation.id}
-                          className="p-3 bg-green-50 rounded-lg border border-green-200"
+                          className="p-4 bg-green-50 rounded-lg border border-green-200"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="font-medium text-gray-900 mb-1">
                                 {prestation.serviceName}
                               </div>
-                              <div className="flex items-center justify-between text-sm text-gray-600">
-                                <span>{prestation.serviceCategory}</span>
-                                <span className="font-semibold text-green-600">
-                                  +{prestation.price}€
+                              <div className="text-sm text-gray-600 mb-2">
+                                <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  {prestation.serviceCategory}
                                 </span>
                               </div>
+                              
+                              {/* Détails de paiement */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Total:</span>
+                                  <span className="font-semibold text-green-600">
+                                    +{getPrestationTotal(prestation)}€
+                                  </span>
+                                </div>
+                                
+                                {/* Mode de paiement avec détails */}
+                                <div className="bg-white rounded-md p-2 border border-green-200">
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    {prestation.paymentMethod === 'cash' && (
+                                      <>
+                                        <Banknote className="h-4 w-4 text-green-600" />
+                                        <span className="text-sm font-medium text-gray-700">Paiement en espèces</span>
+                                      </>
+                                    )}
+                                    {prestation.paymentMethod === 'card' && (
+                                      <>
+                                        <CreditCard className="h-4 w-4 text-blue-600" />
+                                        <span className="text-sm font-medium text-gray-700">Paiement par carte</span>
+                                      </>
+                                    )}
+                                    {prestation.paymentMethod === 'mixed' && (
+                                      <>
+                                        <DollarSign className="h-4 w-4 text-purple-600" />
+                                        <span className="text-sm font-medium text-gray-700">Paiement mixte</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Détail des montants */}
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    {prestation.cashAmount > 0 && (
+                                      <div className="flex items-center space-x-1 text-gray-600">
+                                        <Banknote className="h-3 w-3" />
+                                        <span>Espèces: {prestation.cashAmount}€</span>
+                                      </div>
+                                    )}
+                                    {prestation.cardAmount > 0 && (
+                                      <div className="flex items-center space-x-1 text-gray-600">
+                                        <CreditCard className="h-3 w-3" />
+                                        <span>Carte: {prestation.cardAmount}€</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
                               {prestation.notes && (
-                                <div className="mt-2 text-xs text-gray-500">
-                                  {prestation.notes}
+                                <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600 border-l-2 border-gray-300">
+                                  <span className="font-medium">Note:</span> {prestation.notes}
                                 </div>
                               )}
                             </div>
@@ -447,6 +574,11 @@ const CalendarPage: React.FC = () => {
               const netProfit = totalRevenue - totalExpenses;
               const activeDays = monthlyStats.length;
               
+              // Calculer les totaux par mode de paiement
+              const allPrestations = monthlyStats.flatMap(stats => stats.prestations);
+              const totalCash = allPrestations.reduce((sum, p) => sum + p.cashAmount, 0);
+              const totalCard = allPrestations.reduce((sum, p) => sum + p.cardAmount, 0);
+              
               return (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -465,6 +597,38 @@ const CalendarPage: React.FC = () => {
                     <span className="text-gray-600">Revenus totaux:</span>
                     <span className="font-semibold text-green-600">+{totalRevenue}€</span>
                   </div>
+                  
+                  {/* Détail des paiements mensuels */}
+                  {totalPrestations > 0 && (
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Répartition des paiements:</div>
+                      {totalCash > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <Banknote className="h-4 w-4 text-green-600" />
+                            <span className="text-gray-600">Espèces:</span>
+                          </div>
+                          <span className="font-semibold text-green-600">{totalCash}€</span>
+                        </div>
+                      )}
+                      {totalCard > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="h-4 w-4 text-blue-600" />
+                            <span className="text-gray-600">Carte:</span>
+                          </div>
+                          <span className="font-semibold text-blue-600">{totalCard}€</span>
+                        </div>
+                      )}
+                      {totalCash > 0 && totalCard > 0 && (
+                        <div className="text-xs text-gray-500 pt-1 border-t border-gray-200">
+                          Espèces: {Math.round((totalCash / totalRevenue) * 100)}% • 
+                          Carte: {Math.round((totalCard / totalRevenue) * 100)}%
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Dépenses totales:</span>
                     <span className="font-semibold text-red-600">-{totalExpenses}€</span>

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { format } from 'date-fns';
 import { ArrowLeft, Save, Euro } from 'lucide-react';
 import Link from 'next/link';
-import { addExpense } from '../utils/storage';
+import { addExpense } from '../utils/supabase-storage';
 import { EXPENSE_CATEGORIES } from '../data/expenses';
 import { Expense } from '../types';
 
@@ -55,7 +55,7 @@ const AddExpense: React.FC = () => {
       }
 
       const expense: Expense = {
-        id: Date.now().toString(),
+        id: 0,
         categoryId: formData.categoryId,
         categoryName: selectedCategory.name,
         amount: parseFloat(formData.amount),

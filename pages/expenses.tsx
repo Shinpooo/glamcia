@@ -11,28 +11,41 @@ import {
   DollarSign,
   FileText
 } from 'lucide-react';
-import { loadExpenses, deleteExpense } from '../utils/storage';
+import { loadExpenses, deleteExpense } from '../utils/supabase-storage';
 import { Expense } from '../types';
+import { useSession } from 'next-auth/react';
 
 const Expenses: React.FC = () => {
+  const { data: session } = useSession();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'category'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isLoading, setIsLoading] = useState(true);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   useEffect(() => {
-    const loadData = () => {
-      const expenseData = loadExpenses();
-      setExpenses(expenseData);
-      setFilteredExpenses(expenseData);
-      setIsLoading(false);
+    const loadData = async () => {
+      if (!session?.user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const userEmail = session.user.email;
+        const expenseData = await loadExpenses(userEmail);
+        setExpenses(expenseData);
+        setFilteredExpenses(expenseData);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading expenses:', error);
+        setIsLoading(false);
+      }
     };
 
     loadData();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     const filtered = expenses.filter(expense => {
@@ -65,14 +78,23 @@ const Expenses: React.FC = () => {
     setFilteredExpenses(filtered);
   }, [expenses, searchTerm, sortBy, sortOrder]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
+    if (!session?.user?.email) return;
+
     try {
-      deleteExpense(id);
-      const updatedExpenses = expenses.filter(expense => expense.id !== id);
-      setExpenses(updatedExpenses);
-      setDeleteConfirm(null);
+      const userEmail = session.user.email;
+      const success = await deleteExpense(id, userEmail);
+      
+      if (success) {
+        const updatedExpenses = expenses.filter(expense => expense.id !== id);
+        setExpenses(updatedExpenses);
+        setDeleteConfirm(null);
+      } else {
+        alert('Erreur lors de la suppression');
+      }
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression');
     }
   };
 
@@ -222,7 +244,7 @@ const Expenses: React.FC = () => {
                 Annuler
               </button>
               <button
-                onClick={() => handleDelete(deleteConfirm)}
+                onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 Supprimer
