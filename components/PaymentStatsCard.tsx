@@ -35,7 +35,7 @@ const PaymentStatsCard: React.FC<PaymentStatsCardProps> = ({
       <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
         <div className="text-center">
           <p className="text-2xl font-bold text-gray-900">{totalRevenue}€</p>
-          <p className="text-sm text-gray-600">Chiffre d'affaires total</p>
+          <p className="text-sm text-gray-600">Chiffre d&apos;affaires total</p>
         </div>
       </div>
 

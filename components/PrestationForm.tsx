@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Save, Euro, FileText, Calendar, Tag } from 'lucide-react';
+import { Save, FileText, Calendar, Tag } from 'lucide-react';
 import { SERVICES, getServiceById } from '../data/services';
 import { addPrestation, updatePrestation } from '../utils/supabase-storage';
-import { Prestation, PaymentDetails, getPrestationTotal } from '../types';
+import { Prestation, PaymentDetails } from '../types';
 import FormInput from './FormInput';
 import FormSelect from './FormSelect';
 import FormTextarea from './FormTextarea';

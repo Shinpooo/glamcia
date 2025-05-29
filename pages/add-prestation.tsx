@@ -57,11 +57,11 @@ const AddPrestation: React.FC = () => {
       if (success) {
         router.push('/history');
       } else {
-        alert('Erreur lors de l\'ajout de la prestation');
+        alert('Erreur lors de l&apos;ajout de la prestation');
       }
     } catch (error) {
-      console.error('Erreur lors de l\'ajout de la prestation:', error);
-      alert('Erreur lors de l\'ajout de la prestation');
+      console.error('Erreur lors de l&apos;ajout de la prestation:', error);
+      alert('Erreur lors de l&apos;ajout de la prestation');
     } finally {
       setIsSubmitting(false);
     }
@@ -100,13 +100,13 @@ const AddPrestation: React.FC = () => {
             </h3>
             <p className="text-blue-700 mb-4">
               Pour une meilleure expérience avec la gestion des paiements (espèces, carte, mixte), 
-              nous recommandons d'utiliser le formulaire complet depuis le dashboard ou l'historique.
+              nous recommandons d&apos;utiliser le formulaire complet depuis le dashboard ou l&apos;historique.
             </p>
             <button
               onClick={() => router.push('/history')}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Aller à l'historique
+              Aller à l&apos;historique
             </button>
           </div>
         </div>

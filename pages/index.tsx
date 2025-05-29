@@ -14,10 +14,7 @@ import {
   Minus,
   Award,
   Activity,
-  TrendingDown,
-  FileText,
-  Target,
-  Sparkles
+  TrendingDown
 } from 'lucide-react';
 import { getCombinedDailyStats, getRevenueByMonth, getExpensesByMonth, loadPrestations } from '../utils/supabase-storage';
 import { CombinedDailyStats } from '../utils/supabase-storage';
@@ -26,8 +23,7 @@ import PrestationForm from '../components/PrestationForm';
 import ExpenseForm from '../components/ExpenseForm';
 import TimeChart from '../components/WeeklyChart';
 import { useSession } from 'next-auth/react';
-import PaymentStatsCard from '../components/PaymentStatsCard';
-import { Prestation, Expense, getPrestationTotal } from '../types';
+import { getPrestationTotal } from '../types';
 
 const Dashboard: React.FC = () => {
   const { data: session } = useSession();

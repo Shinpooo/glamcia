@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { format } from 'date-fns';
-import { ArrowLeft, Save, Trash2, Euro } from 'lucide-react';
+import { ArrowLeft, Save, Euro } from 'lucide-react';
 import Link from 'next/link';
-import { getExpenseById, updateExpense, deleteExpense } from '../../utils/supabase-storage';
+import { getExpenseById, updateExpense } from '../../utils/supabase-storage';
 import { EXPENSE_CATEGORIES } from '../../data/expenses';
 import { Expense, ExpenseCategory } from '../../types';
 import { useSession } from 'next-auth/react';
@@ -21,7 +20,6 @@ const EditExpense: React.FC = () => {
     description: ''
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -88,7 +86,7 @@ const EditExpense: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const selectedCategory = EXPENSE_CATEGORIES.find((cat: any) => cat.id === formData.categoryId);
+      const selectedCategory = EXPENSE_CATEGORIES.find((cat: ExpenseCategory) => cat.id === formData.categoryId);
       
       if (!selectedCategory) {
         setErrors({ categoryId: 'Catégorie non trouvée' });

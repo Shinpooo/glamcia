@@ -21,7 +21,6 @@ const PrestationsPage: React.FC = () => {
   const [prestations, setPrestations] = useState<Prestation[]>([]);
   const [filteredPrestations, setFilteredPrestations] = useState<Prestation[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'service'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isLoading, setIsLoading] = useState(true);

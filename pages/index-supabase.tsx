@@ -1,35 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Euro, 
-  Calendar, 
   TrendingUp, 
-  Users, 
-  Plus,
-  Clock,
-  Star,
   BarChart3,
-  Minus,
   Award,
   Activity,
-  TrendingDown,
-  FileText,
-  Target,
-  Sparkles
+  TrendingDown
 } from 'lucide-react';
 import { getCombinedDailyStats, getRevenueByMonth, getExpensesByMonth, loadPrestations } from '../utils/supabase-storage';
 import { CombinedDailyStats } from '../utils/supabase-storage';
 import Modal from '../components/Modal';
 import PrestationForm from '../components/PrestationForm';
 import ExpenseForm from '../components/ExpenseForm';
-import TimeChart from '../components/WeeklyChart';
-import { useSession } from 'next-auth/react';
-import PaymentStatsCard from '../components/PaymentStatsCard';
-import { Prestation, Expense, getPrestationTotal } from '../types';
+import { getPrestationTotal } from '../types';
 
 const Dashboard: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [dailyStats, setDailyStats] = useState<CombinedDailyStats[]>([]);
   const [monthlyRevenue, setMonthlyRevenue] = useState<{ [month: string]: number }>({});
   const [monthlyExpenses, setMonthlyExpenses] = useState<{ [month: string]: number }>({});
@@ -45,10 +33,10 @@ const Dashboard: React.FC = () => {
     const loadData = async () => {
       try {
         const [stats, monthly, monthlyExp, prestations] = await Promise.all([
-          getCombinedDailyStats(),
-          getRevenueByMonth(),
-          getExpensesByMonth(),
-          loadPrestations()
+          getCombinedDailyStats(''),
+          getRevenueByMonth(''),
+          getExpensesByMonth(''),
+          loadPrestations('')
         ]);
         
         // Calculate new metrics
@@ -115,17 +103,16 @@ const Dashboard: React.FC = () => {
   const currentMonthRevenue = monthlyRevenue[currentMonth] || 0;
   const currentMonthExpenses = monthlyExpenses[currentMonth] || 0;
   const currentMonthProfit = currentMonthRevenue - currentMonthExpenses;
-  const recentStats = dailyStats.slice(0, 5);
 
   const handlePrestationSuccess = async () => {
     setIsPrestationModalOpen(false);
     // Reload data
     try {
       const [stats, monthly, monthlyExp, prestations] = await Promise.all([
-        getCombinedDailyStats(),
-        getRevenueByMonth(),
-        getExpensesByMonth(),
-        loadPrestations()
+        getCombinedDailyStats(''),
+        getRevenueByMonth(''),
+        getExpensesByMonth(''),
+        loadPrestations('')
       ]);
       
       // Recalculate new metrics
@@ -185,10 +172,10 @@ const Dashboard: React.FC = () => {
     // Reload data (same logic as handlePrestationSuccess)
     try {
       const [stats, monthly, monthlyExp, prestations] = await Promise.all([
-        getCombinedDailyStats(),
-        getRevenueByMonth(),
-        getExpensesByMonth(),
-        loadPrestations()
+        getCombinedDailyStats(''),
+        getRevenueByMonth(''),
+        getExpensesByMonth(''),
+        loadPrestations('')
       ]);
       
       // Recalculate metrics (same logic as above)
