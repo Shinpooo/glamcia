@@ -64,10 +64,14 @@ interface TimeData {
   prestationsCash: { [category: string]: number };
   prestationsCard: { [category: string]: number };
   expenses: { [category: string]: number };
+  expensesCash: { [category: string]: number };
+  expensesCard: { [category: string]: number };
   totalRevenue: number;
   totalCashRevenue: number;
   totalCardRevenue: number;
   totalExpenses: number;
+  totalCashExpenses: number;
+  totalCardExpenses: number;
   netProfit: number;
   netCashProfit: number;
   netCardProfit: number;
@@ -205,10 +209,28 @@ const TimeChart: React.FC = () => {
               'Aménagement du salon': 0,
               'Divers': 0,
             },
+            expensesCash: {
+              'Fournisseur ongle': 0,
+              'Fournisseur cheveux': 0,
+              'Fournisseur spray tan': 0,
+              'Fournisseur blanchiment': 0,
+              'Aménagement du salon': 0,
+              'Divers': 0,
+            },
+            expensesCard: {
+              'Fournisseur ongle': 0,
+              'Fournisseur cheveux': 0,
+              'Fournisseur spray tan': 0,
+              'Fournisseur blanchiment': 0,
+              'Aménagement du salon': 0,
+              'Divers': 0,
+            },
             totalRevenue: 0,
             totalCashRevenue: 0,
             totalCardRevenue: 0,
             totalExpenses: 0,
+            totalCashExpenses: 0,
+            totalCardExpenses: 0,
             netProfit: 0,
             netCashProfit: 0,
             netCardProfit: 0
@@ -237,12 +259,22 @@ const TimeChart: React.FC = () => {
             if (isWithinInterval(expenseDate, { start: intervalStart, end: intervalEnd })) {
               timeDataItem.expenses[expense.categoryName] += expense.amount;
               timeDataItem.totalExpenses += expense.amount;
+              
+              if (expense.cashAmount > 0) {
+                timeDataItem.expensesCash[expense.categoryName] += expense.cashAmount;
+                timeDataItem.totalCashExpenses += expense.cashAmount;
+              }
+              
+              if (expense.cardAmount > 0) {
+                timeDataItem.expensesCard[expense.categoryName] += expense.cardAmount;
+                timeDataItem.totalCardExpenses += expense.cardAmount;
+              }
             }
           });
           
           timeDataItem.netProfit = timeDataItem.totalRevenue - timeDataItem.totalExpenses;
-          timeDataItem.netCashProfit = timeDataItem.totalCashRevenue - timeDataItem.totalExpenses;
-          timeDataItem.netCardProfit = timeDataItem.totalCardRevenue - timeDataItem.totalExpenses;
+          timeDataItem.netCashProfit = timeDataItem.totalCashRevenue - timeDataItem.totalCashExpenses;
+          timeDataItem.netCardProfit = timeDataItem.totalCardRevenue - timeDataItem.totalCardExpenses;
           
           return timeDataItem;
         });
@@ -291,11 +323,17 @@ const TimeChart: React.FC = () => {
           });
         });
 
-        // Datasets pour les dépenses (valeurs négatives) - inchangé
+        // Datasets pour les dépenses (valeurs négatives) - selon le filtre de paiement
+        const expenseData = paymentFilter === 'cash' 
+          ? newTimeData.map(data => data.expensesCash)
+          : paymentFilter === 'card'
+          ? newTimeData.map(data => data.expensesCard)
+          : newTimeData.map(data => data.expenses);
+
         Object.keys(expenseColors).forEach(category => {
           datasets.push({
             label: category,
-            data: newTimeData.map(data => -(data.expenses[category] || 0)),
+            data: expenseData.map(data => -(data[category] || 0)),
             backgroundColor: expenseColors[category as keyof typeof expenseColors],
             borderColor: expenseColors[category as keyof typeof expenseColors].replace('0.8', '1'),
             borderWidth: 1,
@@ -377,6 +415,11 @@ const TimeChart: React.FC = () => {
               : paymentFilter === 'card'
               ? period.totalCardRevenue
               : period.totalRevenue;
+            const currentExpenses = paymentFilter === 'cash'
+              ? period.totalCashExpenses
+              : paymentFilter === 'card'
+              ? period.totalCardExpenses
+              : period.totalExpenses;
             const currentProfit = paymentFilter === 'cash'
               ? period.netCashProfit
               : paymentFilter === 'card'
@@ -386,7 +429,7 @@ const TimeChart: React.FC = () => {
             const filterConfig = getPaymentFilterConfig(paymentFilter);
             return [
               `Revenus (${filterConfig.description}): +${currentRevenue}€`,
-              `Dépenses: -${period.totalExpenses}€`,
+              `Dépenses (${filterConfig.description}): -${currentExpenses}€`,
               `Bénéfice (${filterConfig.description}): ${currentProfit >= 0 ? '+' : ''}${currentProfit}€`
             ];
           },

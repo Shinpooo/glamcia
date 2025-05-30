@@ -1,5 +1,5 @@
 import { supabase, DatabasePrestation, DatabaseExpense } from '../lib/supabase'
-import { Prestation, DailyStats, Expense, DailyExpenseStats, PaymentMethod, getPrestationTotal } from '../types'
+import { Prestation, DailyStats, Expense, DailyExpenseStats, PaymentMethod, getPrestationTotal, getExpenseTotal } from '../types'
 import { format, parseISO } from 'date-fns'
 
 // Convert database record to app format
@@ -19,9 +19,12 @@ const dbExpenseToExpense = (dbExpense: DatabaseExpense): Expense => ({
   id: dbExpense.id,
   categoryId: dbExpense.category_id,
   categoryName: dbExpense.category_name,
-  amount: dbExpense.amount,
+  amount: dbExpense.amount, // Keep for backward compatibility
   date: dbExpense.date,
-  description: dbExpense.description
+  description: dbExpense.description,
+  paymentMethod: (dbExpense.payment_method || 'cash') as PaymentMethod, // Default to cash for old records
+  cashAmount: dbExpense.cash_amount || dbExpense.amount || 0, // Fallback for old data
+  cardAmount: dbExpense.card_amount || 0
 })
 
 // Convert app format to database format
@@ -41,9 +44,12 @@ const expenseToDbExpense = (expense: Expense, userEmail: string): Omit<DatabaseE
   user_email: userEmail,
   category_id: expense.categoryId,
   category_name: expense.categoryName,
-  amount: expense.amount,
+  amount: expense.amount || getExpenseTotal(expense), // Keep for backward compatibility
   date: expense.date,
-  description: expense.description
+  description: expense.description,
+  payment_method: expense.paymentMethod,
+  cash_amount: expense.cashAmount,
+  card_amount: expense.cardAmount
 })
 
 // PRESTATIONS FUNCTIONS
@@ -385,13 +391,27 @@ export const getDailyExpenseStats = async (userEmail?: string): Promise<DailyExp
         date,
         totalExpenses: 0,
         expenseCount: 0,
-        expenses: []
+        expenses: [],
+        totalCashExpenses: 0,
+        totalCardExpenses: 0,
+        cashExpenseCount: 0,
+        cardExpenseCount: 0
       }
     }
     
-    statsMap[date].totalExpenses += expense.amount
+    const expenseTotal = getExpenseTotal(expense)
+    statsMap[date].totalExpenses += expenseTotal
     statsMap[date].expenseCount += 1
     statsMap[date].expenses.push(expense)
+    statsMap[date].totalCashExpenses += expense.cashAmount
+    statsMap[date].totalCardExpenses += expense.cardAmount
+    
+    // Count payment methods
+    if (expense.paymentMethod === 'cash') {
+      statsMap[date].cashExpenseCount += 1
+    } else if (expense.paymentMethod === 'card') {
+      statsMap[date].cardExpenseCount += 1
+    }
   })
 
   return Object.values(statsMap).sort((a, b) => 
@@ -406,7 +426,7 @@ export const getTotalRevenue = async (userEmail?: string): Promise<number> => {
 
 export const getTotalExpenses = async (userEmail?: string): Promise<number> => {
   const expenses = await loadExpenses(userEmail)
-  return expenses.reduce((total, expense) => total + expense.amount, 0)
+  return expenses.reduce((total, expense) => total + getExpenseTotal(expense), 0)
 }
 
 export const getRevenueByMonth = async (userEmail?: string): Promise<{ [month: string]: number }> => {
@@ -439,7 +459,7 @@ export const getExpensesByMonth = async (userEmail?: string): Promise<{ [month: 
       monthlyExpenses[monthKey] = 0
     }
     
-    monthlyExpenses[monthKey] += expense.amount
+    monthlyExpenses[monthKey] += getExpenseTotal(expense)
   })
 
   return monthlyExpenses
@@ -485,6 +505,11 @@ export interface CombinedDailyStats {
   expenseCount: number
   prestations: Prestation[]
   expenses: Expense[]
+  // Payment breakdown
+  totalCashRevenue: number
+  totalCardRevenue: number
+  totalCashExpenses: number
+  totalCardExpenses: number
 }
 
 export const getCombinedDailyStats = async (userEmail?: string): Promise<CombinedDailyStats[]> => {
@@ -508,13 +533,19 @@ export const getCombinedDailyStats = async (userEmail?: string): Promise<Combine
         prestationCount: 0,
         expenseCount: 0,
         prestations: [],
-        expenses: []
+        expenses: [],
+        totalCashRevenue: 0,
+        totalCardRevenue: 0,
+        totalCashExpenses: 0,
+        totalCardExpenses: 0
       }
     }
     
     statsMap[date].totalRevenue += getPrestationTotal(prestation)
     statsMap[date].prestationCount += 1
     statsMap[date].prestations.push(prestation)
+    statsMap[date].totalCashRevenue += prestation.cashAmount
+    statsMap[date].totalCardRevenue += prestation.cardAmount
   })
 
   // Process expenses
@@ -530,13 +561,19 @@ export const getCombinedDailyStats = async (userEmail?: string): Promise<Combine
         prestationCount: 0,
         expenseCount: 0,
         prestations: [],
-        expenses: []
+        expenses: [],
+        totalCashRevenue: 0,
+        totalCardRevenue: 0,
+        totalCashExpenses: 0,
+        totalCardExpenses: 0
       }
     }
     
-    statsMap[date].totalExpenses += expense.amount
+    statsMap[date].totalExpenses += getExpenseTotal(expense)
     statsMap[date].expenseCount += 1
     statsMap[date].expenses.push(expense)
+    statsMap[date].totalCashExpenses += expense.cashAmount
+    statsMap[date].totalCardExpenses += expense.cardAmount
   })
 
   // Calculate net profit for each day

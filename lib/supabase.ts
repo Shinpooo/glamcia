@@ -34,6 +34,9 @@ export interface DatabaseExpense {
   amount: number
   date: string
   description?: string
+  payment_method: string
+  cash_amount: number
+  card_amount: number
   created_at: string
   updated_at: string
 } 

@@ -67,7 +67,10 @@ const HistoryPage: React.FC = () => {
           date: expense.date,
           description: expense.categoryName,
           category: expense.categoryName,
-          notes: expense.description
+          notes: expense.description,
+          paymentMethod: expense.paymentMethod,
+          cashAmount: expense.cashAmount,
+          cardAmount: expense.cardAmount
         }));
 
         const allTransactions = [...revenueTransactions, ...expenseTransactions];
@@ -167,7 +170,10 @@ const HistoryPage: React.FC = () => {
           date: expense.date,
           description: expense.categoryName,
           category: expense.categoryName,
-          notes: expense.description
+          notes: expense.description,
+          paymentMethod: expense.paymentMethod,
+          cashAmount: expense.cashAmount,
+          cardAmount: expense.cardAmount
         }));
 
         const allTransactions = [...revenueTransactions, ...expenseTransactions];
@@ -243,7 +249,10 @@ const HistoryPage: React.FC = () => {
         date: expense.date,
         description: expense.categoryName,
         category: expense.categoryName,
-        notes: expense.description
+        notes: expense.description,
+        paymentMethod: expense.paymentMethod,
+        cashAmount: expense.cashAmount,
+        cardAmount: expense.cardAmount
       }));
 
       const allTransactions = [...revenueTransactions, ...expenseTransactions];

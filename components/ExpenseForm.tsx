@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Save, Euro, FileText, Calendar, Tag } from 'lucide-react';
+import { Save, FileText, Calendar, Tag } from 'lucide-react';
 import { addExpense, updateExpense } from '../utils/supabase-storage';
 import { EXPENSE_CATEGORIES } from '../data/expenses';
-import { Expense } from '../types';
+import { Expense, PaymentDetails } from '../types';
 import FormInput from './FormInput';
 import FormSelect from './FormSelect';
 import FormTextarea from './FormTextarea';
 import Button from './Button';
+import ExpensePaymentSelector from './ExpensePaymentSelector';
 import { useSession } from 'next-auth/react';
 
 interface ExpenseFormProps {
@@ -23,13 +24,18 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 }) => {
   const { data: session } = useSession();
   const [categoryId, setCategoryId] = useState<string>(expense?.categoryId || '');
-  const [amount, setAmount] = useState<number>(expense?.amount || 0);
   const [date, setDate] = useState<string>(expense?.date || format(new Date(), 'yyyy-MM-dd'));
   const [description, setDescription] = useState<string>(expense?.description || '');
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
+    method: expense?.paymentMethod || 'cash',
+    cashAmount: expense?.cashAmount || expense?.amount || 0, // Fallback for old data
+    cardAmount: expense?.cardAmount || 0
+  });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const isEditing = !!expense;
+  const totalAmount = paymentDetails.cashAmount + paymentDetails.cardAmount;
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -38,12 +44,21 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       newErrors.category = 'Veuillez sélectionner une catégorie';
     }
 
-    if (!amount || amount <= 0) {
-      newErrors.amount = 'Veuillez entrer un montant valide';
-    }
-
     if (!date) {
       newErrors.date = 'Veuillez sélectionner une date';
+    }
+
+    // Validate payment details
+    if (totalAmount <= 0) {
+      newErrors.payment = 'Le montant total doit être supérieur à 0€';
+    }
+
+    if (paymentDetails.method === 'cash' && paymentDetails.cashAmount <= 0) {
+      newErrors.payment = 'Le montant en espèces doit être supérieur à 0€';
+    }
+
+    if (paymentDetails.method === 'card' && paymentDetails.cardAmount <= 0) {
+      newErrors.payment = 'Le montant par carte doit être supérieur à 0€';
     }
 
     setErrors(newErrors);
@@ -75,9 +90,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       id: expense?.id || 0,
       categoryId,
       categoryName: selectedCategory.name,
-      amount,
+      amount: totalAmount, // Keep for backward compatibility
       date,
-      description: description.trim() || undefined
+      description: description.trim() || undefined,
+      paymentMethod: paymentDetails.method,
+      cashAmount: paymentDetails.cashAmount,
+      cardAmount: paymentDetails.cardAmount
     };
 
     try {
@@ -131,16 +149,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
         error={errors.category}
       />
 
-      {/* Amount */}
-      <FormInput
-        label="Montant (€)"
-        type="number"
-        value={amount || ''}
-        onChange={(e) => setAmount(Number(e.target.value) || 0)}
-        placeholder="0.00"
-        required
-        icon={Euro}
-        error={errors.amount}
+      {/* Payment Method Selector */}
+      <ExpensePaymentSelector
+        value={paymentDetails}
+        onChange={setPaymentDetails}
+        error={errors.payment}
       />
 
       {/* Description */}
@@ -175,7 +188,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
           type="submit"
           variant="primary"
           loading={isSubmitting}
-          disabled={!categoryId || amount <= 0}
+          disabled={!categoryId || totalAmount <= 0}
           icon={Save}
           className="flex-1"
         >

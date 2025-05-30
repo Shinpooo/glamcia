@@ -89,8 +89,8 @@ const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, onDelete
             </div>
           </div>
 
-          {/* Payment Method Display for Revenue Transactions */}
-          {transaction.type === 'revenue' && transaction.paymentMethod && (
+          {/* Payment Method Display for All Transactions */}
+          {transaction.paymentMethod && (
             <div className="mb-4">
               <PaymentMethodDisplay
                 paymentMethod={transaction.paymentMethod}

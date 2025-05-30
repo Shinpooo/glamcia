@@ -60,7 +60,10 @@ const AddExpense: React.FC = () => {
         categoryName: selectedCategory.name,
         amount: parseFloat(formData.amount),
         date: formData.date,
-        description: formData.description || undefined
+        description: formData.description || undefined,
+        paymentMethod: 'cash', // Default to cash for simplified form
+        cashAmount: parseFloat(formData.amount),
+        cardAmount: 0
       };
 
       addExpense(expense);

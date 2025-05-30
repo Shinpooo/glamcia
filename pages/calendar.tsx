@@ -19,7 +19,7 @@ import { getCombinedDailyStats, deletePrestation, deleteExpense, CombinedDailySt
 import Modal from '../components/Modal';
 import PrestationForm from '../components/PrestationForm';
 import ExpenseForm from '../components/ExpenseForm';
-import { Prestation, Expense, getPrestationTotal } from '../types';
+import { Prestation, Expense, getPrestationTotal, getExpenseTotal } from '../types';
 import { useSession } from 'next-auth/react';
 
 const CalendarPage: React.FC = () => {
@@ -370,6 +370,31 @@ const CalendarPage: React.FC = () => {
                         <div className="text-xs text-gray-500">
                           {selectedDayStats.expenseCount} dépense{selectedDayStats.expenseCount > 1 ? 's' : ''}
                         </div>
+                        {selectedDayStats.expenses.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {(() => {
+                              const totalExpensesCash = selectedDayStats.expenses.reduce((sum, e) => sum + e.cashAmount, 0);
+                              const totalExpensesCard = selectedDayStats.expenses.reduce((sum, e) => sum + e.cardAmount, 0);
+                              
+                              return (
+                                <>
+                                  {totalExpensesCash > 0 && (
+                                    <div className="flex items-center space-x-1 text-xs text-gray-600">
+                                      <Banknote className="h-3 w-3" />
+                                      <span>Espèces: {totalExpensesCash}€</span>
+                                    </div>
+                                  )}
+                                  {totalExpensesCard > 0 && (
+                                    <div className="flex items-center space-x-1 text-xs text-gray-600">
+                                      <CreditCard className="h-3 w-3" />
+                                      <span>Carte: {totalExpensesCard}€</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-gray-200">
@@ -502,15 +527,54 @@ const CalendarPage: React.FC = () => {
                               <div className="font-medium text-gray-900 mb-1">
                                 {expense.categoryName}
                               </div>
-                              <div className="flex items-center justify-between text-sm text-gray-600">
-                                <span>Dépense</span>
-                                <span className="font-semibold text-red-600">
-                                  -{expense.amount}€
-                                </span>
+                              
+                              {/* Détails de paiement */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Total:</span>
+                                  <span className="font-semibold text-red-600">
+                                    -{getExpenseTotal(expense)}€
+                                  </span>
+                                </div>
+                                
+                                {/* Mode de paiement avec détails */}
+                                <div className="bg-white rounded-md p-2 border border-red-200">
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    {expense.paymentMethod === 'cash' && (
+                                      <>
+                                        <Banknote className="h-4 w-4 text-green-600" />
+                                        <span className="text-sm font-medium text-gray-700">Paiement en espèces</span>
+                                      </>
+                                    )}
+                                    {expense.paymentMethod === 'card' && (
+                                      <>
+                                        <CreditCard className="h-4 w-4 text-blue-600" />
+                                        <span className="text-sm font-medium text-gray-700">Paiement par carte</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Détail des montants */}
+                                  <div className="text-xs text-gray-600">
+                                    {expense.paymentMethod === 'cash' && (
+                                      <div className="flex items-center space-x-1">
+                                        <Banknote className="h-3 w-3" />
+                                        <span>Espèces: {expense.cashAmount}€</span>
+                                      </div>
+                                    )}
+                                    {expense.paymentMethod === 'card' && (
+                                      <div className="flex items-center space-x-1">
+                                        <CreditCard className="h-3 w-3" />
+                                        <span>Carte: {expense.cardAmount}€</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
+                              
                               {expense.description && (
-                                <div className="mt-2 text-xs text-gray-500">
-                                  {expense.description}
+                                <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600 border-l-2 border-gray-300">
+                                  <span className="font-medium">Description:</span> {expense.description}
                                 </div>
                               )}
                             </div>
@@ -579,6 +643,11 @@ const CalendarPage: React.FC = () => {
               const totalCash = allPrestations.reduce((sum, p) => sum + p.cashAmount, 0);
               const totalCard = allPrestations.reduce((sum, p) => sum + p.cardAmount, 0);
               
+              // Calculer les totaux des dépenses par mode de paiement
+              const allExpenses = monthlyStats.flatMap(stats => stats.expenses);
+              const totalExpensesCash = allExpenses.reduce((sum, e) => sum + e.cashAmount, 0);
+              const totalExpensesCard = allExpenses.reduce((sum, e) => sum + e.cardAmount, 0);
+              
               return (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -633,6 +702,38 @@ const CalendarPage: React.FC = () => {
                     <span className="text-gray-600">Dépenses totales:</span>
                     <span className="font-semibold text-red-600">-{totalExpenses}€</span>
                   </div>
+                  
+                  {/* Détail des dépenses par mode de paiement */}
+                  {totalExpenseCount > 0 && (totalExpensesCash > 0 || totalExpensesCard > 0) && (
+                    <div className="bg-red-50 rounded-lg p-3 space-y-2">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Dépenses par mode de paiement:</div>
+                      {totalExpensesCash > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <Banknote className="h-4 w-4 text-green-600" />
+                            <span className="text-gray-600">Espèces:</span>
+                          </div>
+                          <span className="font-semibold text-red-600">-{totalExpensesCash}€</span>
+                        </div>
+                      )}
+                      {totalExpensesCard > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="h-4 w-4 text-blue-600" />
+                            <span className="text-gray-600">Carte:</span>
+                          </div>
+                          <span className="font-semibold text-red-600">-{totalExpensesCard}€</span>
+                        </div>
+                      )}
+                      {totalExpensesCash > 0 && totalExpensesCard > 0 && (
+                        <div className="text-xs text-gray-500 pt-1 border-t border-gray-200">
+                          Espèces: {Math.round((totalExpensesCash / totalExpenses) * 100)}% • 
+                          Carte: {Math.round((totalExpensesCard / totalExpenses) * 100)}%
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between border-t border-gray-200 pt-3">
                     <span className="text-gray-600 font-medium">Bénéfice net:</span>
                     <span className={`font-semibold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>

@@ -33,10 +33,18 @@ export interface Expense {
   id: number;
   categoryId: string;
   categoryName: string;
-  amount: number;
+  amount: number; // Deprecated - keep for backward compatibility
   date: string;
   description?: string;
+  paymentMethod: PaymentMethod;
+  cashAmount: number;
+  cardAmount: number;
 }
+
+// Helper function to get total expense amount
+export const getExpenseTotal = (expense: Expense): number => {
+  return expense.cashAmount + expense.cardAmount;
+};
 
 export interface ExpenseCategory {
   id: string;
@@ -60,6 +68,10 @@ export interface DailyExpenseStats {
   totalExpenses: number;
   expenseCount: number;
   expenses: Expense[];
+  totalCashExpenses: number;
+  totalCardExpenses: number;
+  cashExpenseCount: number;
+  cardExpenseCount: number;
 }
 
 export interface PaymentMethodStats {
