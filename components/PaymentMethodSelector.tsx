@@ -21,6 +21,12 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     setLocalCardAmount(value.cardAmount.toString());
   }, [value.cashAmount, value.cardAmount]);
 
+  // Prevent mouse wheel scrolling on number inputs
+  const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    (e.target as HTMLInputElement).blur();
+  };
+
   const handleMethodChange = (method: PaymentMethod) => {
     // Reset amounts when changing method
     const newPaymentDetails: PaymentDetails = {
@@ -127,6 +133,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                     type="number"
                     value={localCashAmount}
                     onChange={(e) => handleCashAmountChange(e.target.value)}
+                    onWheel={handleWheel}
                     min="0"
                     step="0.01"
                     className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-medium"
@@ -148,6 +155,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                     type="number"
                     value={localCardAmount}
                     onChange={(e) => handleCardAmountChange(e.target.value)}
+                    onWheel={handleWheel}
                     min="0"
                     step="0.01"
                     className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-medium"

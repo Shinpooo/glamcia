@@ -13,6 +13,12 @@ const ExpensePaymentSelector: React.FC<ExpensePaymentSelectorProps> = ({
   onChange,
   error
 }) => {
+  // Prevent mouse wheel scrolling on number inputs
+  const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    (e.target as HTMLInputElement).blur();
+  };
+
   const handleMethodChange = (method: 'cash' | 'card') => {
     // For expenses, only cash or card (no mixed)
     onChange({
@@ -104,6 +110,7 @@ const ExpensePaymentSelector: React.FC<ExpensePaymentSelectorProps> = ({
             min="0"
             value={totalAmount || ''}
             onChange={(e) => handleAmountChange(parseFloat(e.target.value) || 0)}
+            onWheel={handleWheel}
             className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-colors ${
               error ? 'border-red-300' : 'border-gray-300'
             }`}
