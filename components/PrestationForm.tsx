@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Save, FileText, Calendar, Tag } from 'lucide-react';
-import { SERVICES, getServiceById } from '../data/services';
+import { SERVICE_CATEGORIES } from '../data/services';
 import { addPrestation, updatePrestation } from '../utils/supabase-storage';
 import { Prestation, PaymentDetails } from '../types';
 import FormInput from './FormInput';
@@ -23,7 +23,7 @@ const PrestationForm: React.FC<PrestationFormProps> = ({
   onCancel 
 }) => {
   const { data: session } = useSession();
-  const [selectedServiceId, setSelectedServiceId] = useState<string>(prestation?.serviceId || '');
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string>(prestation?.serviceCategory || '');
   const [date, setDate] = useState<string>(prestation?.date || format(new Date(), 'yyyy-MM-dd'));
   const [notes, setNotes] = useState<string>(prestation?.notes || '');
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
@@ -34,15 +34,20 @@ const PrestationForm: React.FC<PrestationFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const selectedService = getServiceById(selectedServiceId);
   const isEditing = !!prestation;
   const totalAmount = paymentDetails.cashAmount + paymentDetails.cardAmount;
+
+  // Convert SERVICE_CATEGORIES to FormSelect format
+  const serviceOptions = SERVICE_CATEGORIES.map(category => ({
+    value: category,
+    label: category
+  }));
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!selectedServiceId) {
-      newErrors.service = 'Veuillez sélectionner un service';
+    if (!selectedServiceCategory) {
+      newErrors.service = 'Veuillez sélectionner une catégorie de service';
     }
 
     if (!date) {
@@ -77,11 +82,6 @@ const PrestationForm: React.FC<PrestationFormProps> = ({
       return;
     }
 
-    if (!selectedService) {
-      setErrors({ service: 'Service non trouvé' });
-      return;
-    }
-
     if (!session?.user?.email) {
       setErrors({ submit: 'Vous devez être connecté pour ajouter une prestation' });
       return;
@@ -91,9 +91,7 @@ const PrestationForm: React.FC<PrestationFormProps> = ({
     
     const prestationData: Prestation = {
       id: prestation?.id || 0,
-      serviceId: selectedService.id,
-      serviceName: selectedService.name,
-      serviceCategory: selectedService.category,
+      serviceCategory: selectedServiceCategory,
       date,
       notes: notes.trim() || undefined,
       paymentMethod: paymentDetails.method,
@@ -122,11 +120,6 @@ const PrestationForm: React.FC<PrestationFormProps> = ({
     }
   };
 
-  const serviceOptions = SERVICES.map(service => ({
-    value: service.id,
-    label: service.name
-  }));
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Date */}
@@ -142,11 +135,11 @@ const PrestationForm: React.FC<PrestationFormProps> = ({
 
       {/* Service Selection */}
       <FormSelect
-        label="Service"
-        value={selectedServiceId}
-        onChange={(e) => setSelectedServiceId(e.target.value)}
+        label="Catégorie de service"
+        value={selectedServiceCategory}
+        onChange={(e) => setSelectedServiceCategory(e.target.value)}
         options={serviceOptions}
-        placeholder="Sélectionner un service"
+        placeholder="Sélectionner une catégorie de service"
         required
         icon={Tag}
         error={errors.service}
@@ -191,7 +184,7 @@ const PrestationForm: React.FC<PrestationFormProps> = ({
           type="submit"
           variant="primary"
           loading={isSubmitting}
-          disabled={!selectedServiceId || totalAmount <= 0}
+          disabled={!selectedServiceCategory || totalAmount <= 0}
           icon={Save}
           className="flex-1"
         >

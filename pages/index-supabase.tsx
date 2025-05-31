@@ -68,11 +68,11 @@ const Dashboard: React.FC = () => {
         // Top service this month
         const serviceRevenue: { [key: string]: { revenue: number; count: number } } = {};
         thisMonthPrestations.forEach(p => {
-          if (!serviceRevenue[p.serviceName]) {
-            serviceRevenue[p.serviceName] = { revenue: 0, count: 0 };
+          if (!serviceRevenue[p.serviceCategory]) {
+            serviceRevenue[p.serviceCategory] = { revenue: 0, count: 0 };
           }
-          serviceRevenue[p.serviceName].revenue += getPrestationTotal(p);
-          serviceRevenue[p.serviceName].count += 1;
+          serviceRevenue[p.serviceCategory].revenue += getPrestationTotal(p);
+          serviceRevenue[p.serviceCategory].count += 1;
         });
         
         const topService = Object.entries(serviceRevenue).reduce((top, [name, data]) => {
@@ -141,11 +141,11 @@ const Dashboard: React.FC = () => {
       
       const serviceRevenue: { [key: string]: { revenue: number; count: number } } = {};
       thisMonthPrestations.forEach(p => {
-        if (!serviceRevenue[p.serviceName]) {
-          serviceRevenue[p.serviceName] = { revenue: 0, count: 0 };
+        if (!serviceRevenue[p.serviceCategory]) {
+          serviceRevenue[p.serviceCategory] = { revenue: 0, count: 0 };
         }
-        serviceRevenue[p.serviceName].revenue += getPrestationTotal(p);
-        serviceRevenue[p.serviceName].count += 1;
+        serviceRevenue[p.serviceCategory].revenue += getPrestationTotal(p);
+        serviceRevenue[p.serviceCategory].count += 1;
       });
       
       const topService = Object.entries(serviceRevenue).reduce((top, [name, data]) => {
@@ -204,11 +204,11 @@ const Dashboard: React.FC = () => {
       
       const serviceRevenue: { [key: string]: { revenue: number; count: number } } = {};
       thisMonthPrestations.forEach(p => {
-        if (!serviceRevenue[p.serviceName]) {
-          serviceRevenue[p.serviceName] = { revenue: 0, count: 0 };
+        if (!serviceRevenue[p.serviceCategory]) {
+          serviceRevenue[p.serviceCategory] = { revenue: 0, count: 0 };
         }
-        serviceRevenue[p.serviceName].revenue += getPrestationTotal(p);
-        serviceRevenue[p.serviceName].count += 1;
+        serviceRevenue[p.serviceCategory].revenue += getPrestationTotal(p);
+        serviceRevenue[p.serviceCategory].count += 1;
       });
       
       const topService = Object.entries(serviceRevenue).reduce((top, [name, data]) => {

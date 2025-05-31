@@ -424,7 +424,7 @@ const CalendarPage: React.FC = () => {
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="font-medium text-gray-900 mb-1">
-                                {prestation.serviceName}
+                                {prestation.serviceCategory}
                               </div>
                               <div className="text-sm text-gray-600 mb-2">
                                 <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">

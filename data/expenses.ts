@@ -22,6 +22,18 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
     name: 'Aménagement du salon'
   },
   {
+    id: 'formation-ongles',
+    name: 'Formation ongles'
+  },
+  {
+    id: 'formation-spray-tan',
+    name: 'Formation spray tan'
+  },
+  {
+    id: 'formation-soin-lissage',
+    name: 'Formation soin-lissage'
+  },
+  {
     id: 'divers',
     name: 'Divers'
   }

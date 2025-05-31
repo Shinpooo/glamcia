@@ -14,8 +14,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export interface DatabasePrestation {
   id: number
   user_email: string
-  service_id: string
-  service_name: string
   service_category: string
   date: string
   notes?: string

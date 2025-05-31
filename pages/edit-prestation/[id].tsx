@@ -147,8 +147,7 @@ const EditPrestationPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Service</label>
-            <p className="text-lg font-semibold text-gray-900">{prestation.serviceName}</p>
-            <p className="text-sm text-gray-600">{prestation.serviceCategory}</p>
+            <p className="text-lg font-semibold text-gray-900">{prestation.serviceCategory}</p>
           </div>
 
           <div>

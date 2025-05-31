@@ -1,51 +1,21 @@
-import { Service } from '../types';
-
-export const SERVICES: Service[] = [
-  {
-    id: 'manicure',
-    category: 'Manucure',
-    name: 'Manucure'
-  },
-  {
-    id: 'pedicure',
-    category: 'Pédicure',
-    name: 'Pédicure'
-  },
-  {
-    id: 'spray-tanning',
-    category: 'Spray-Tanning',
-    name: 'Spray-Tanning'
-  },
-  {
-    id: 'blanchiment-dentaire',
-    category: 'Blanchiment dentaire',
-    name: 'Blanchiment dentaire'
-  },
-  {
-    id: 'soins',
-    category: 'Soins',
-    name: 'Soins'
-  },
-  {
-    id: 'lissages',
-    category: 'Lissages',
-    name: 'Lissages'
-  }
+// Liste des catégories de services
+export const SERVICE_CATEGORIES: string[] = [
+  'Manucure',
+  'Pédicure', 
+  'Spray-Tanning',
+  'Blanchiment dentaire',
+  'Soins',
+  'Lissages',
+  'Divers',
+  'Formation ongles',
+  'Formation spray tan',
+  'Formation soin-lissage'
 ];
 
-export const getServicesByCategory = () => {
-  const categories: { [key: string]: Service[] } = {};
-  
-  SERVICES.forEach(service => {
-    if (!categories[service.category]) {
-      categories[service.category] = [];
-    }
-    categories[service.category].push(service);
-  });
-  
-  return categories;
+export const getServiceCategories = (): string[] => {
+  return SERVICE_CATEGORIES;
 };
 
-export const getServiceById = (id: string): Service | undefined => {
-  return SERVICES.find(service => service.id === id);
+export const isValidServiceCategory = (category: string): boolean => {
+  return SERVICE_CATEGORIES.includes(category);
 }; 

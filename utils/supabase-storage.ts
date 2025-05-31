@@ -5,8 +5,6 @@ import { format, parseISO } from 'date-fns'
 // Convert database record to app format
 const dbPrestationToPrestation = (dbPrestation: DatabasePrestation): Prestation => ({
   id: dbPrestation.id,
-  serviceId: dbPrestation.service_id,
-  serviceName: dbPrestation.service_name,
   serviceCategory: dbPrestation.service_category,
   date: dbPrestation.date,
   notes: dbPrestation.notes,
@@ -30,8 +28,6 @@ const dbExpenseToExpense = (dbExpense: DatabaseExpense): Expense => ({
 // Convert app format to database format
 const prestationToDbPrestation = (prestation: Prestation, userEmail: string): Omit<DatabasePrestation, 'id' | 'created_at' | 'updated_at'> => ({
   user_email: userEmail,
-  service_id: prestation.serviceId,
-  service_name: prestation.serviceName,
   service_category: prestation.serviceCategory,
   date: prestation.date,
   notes: prestation.notes,

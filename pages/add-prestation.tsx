@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { format } from 'date-fns';
 import { Save, ArrowLeft, Euro, FileText } from 'lucide-react';
-import { SERVICES, getServiceById } from '../data/services';
+import { SERVICE_CATEGORIES } from '../data/services';
 import { addPrestation } from '../utils/supabase-storage';
 import { Prestation } from '../types';
 import { useSession } from 'next-auth/react';
@@ -10,7 +10,7 @@ import { useSession } from 'next-auth/react';
 const AddPrestation: React.FC = () => {
   const router = useRouter();
   const { data: session } = useSession();
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -22,46 +22,42 @@ const AddPrestation: React.FC = () => {
     setDate(defaultDate);
   }, [router.query.date]);
 
-  const selectedService = getServiceById(selectedServiceId);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedService) {
-      alert('Veuillez sélectionner un service');
+    if (!selectedServiceCategory) {
+      alert('Veuillez sélectionner une catégorie de service');
       return;
     }
 
     if (!session?.user?.email) {
-      alert('Vous devez être connecté pour ajouter une prestation');
+      alert('Veuillez vous connecter');
       return;
     }
 
     setIsSubmitting(true);
-    
-    // Create a basic prestation with cash payment - user will edit payment details later
-    const newPrestation: Prestation = {
-      id: 0,
-      serviceId: selectedService.id,
-      serviceName: selectedService.name,
-      serviceCategory: selectedService.category,
-      date,
-      notes: notes.trim() || undefined,
-      paymentMethod: 'cash',
-      cashAmount: 0, // Will be set in the form
-      cardAmount: 0
-    };
 
     try {
+      const newPrestation: Prestation = {
+        id: 0,
+        serviceCategory: selectedServiceCategory,
+        date,
+        notes: notes.trim() || undefined,
+        paymentMethod: 'cash',
+        cashAmount: 0,
+        cardAmount: 0
+      };
+
       const success = await addPrestation(newPrestation, session.user.email);
+      
       if (success) {
-        router.push('/history');
+        router.push('/');
       } else {
-        alert('Erreur lors de l&apos;ajout de la prestation');
+        alert('Erreur lors de l\'ajout de la prestation');
       }
     } catch (error) {
-      console.error('Erreur lors de l&apos;ajout de la prestation:', error);
-      alert('Erreur lors de l&apos;ajout de la prestation');
+      console.error('Error adding prestation:', error);
+      alert('Erreur lors de l\'ajout de la prestation');
     } finally {
       setIsSubmitting(false);
     }
@@ -143,15 +139,15 @@ const AddPrestation: React.FC = () => {
           </label>
           <select
             id="service"
-            value={selectedServiceId}
-            onChange={(e) => setSelectedServiceId(e.target.value)}
+            value={selectedServiceCategory}
+            onChange={(e) => setSelectedServiceCategory(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-colors"
             required
           >
-            <option value="">Sélectionner un service</option>
-            {SERVICES.map((service) => (
-              <option key={service.id} value={service.id}>
-                {service.name}
+            <option value="">Sélectionner une catégorie de service</option>
+            {SERVICE_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
               </option>
             ))}
           </select>
@@ -186,7 +182,7 @@ const AddPrestation: React.FC = () => {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || !selectedServiceId}
+            disabled={isSubmitting || !selectedServiceCategory}
             className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Save className="h-4 w-4" />

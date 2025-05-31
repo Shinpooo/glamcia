@@ -1,9 +1,3 @@
-export interface Service {
-  id: string;
-  category: string;
-  name: string;
-}
-
 export type PaymentMethod = 'cash' | 'card' | 'mixed';
 
 export interface PaymentDetails {
@@ -14,8 +8,6 @@ export interface PaymentDetails {
 
 export interface Prestation {
   id: number;
-  serviceId: string;
-  serviceName: string;
   serviceCategory: string;
   date: string;
   notes?: string;

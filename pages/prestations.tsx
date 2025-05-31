@@ -53,7 +53,7 @@ const PrestationsPage: React.FC = () => {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(prestation =>
-        prestation.serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        prestation.serviceCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
         prestation.serviceCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (prestation.notes && prestation.notes.toLowerCase().includes(searchTerm.toLowerCase()))
       );
@@ -71,7 +71,7 @@ const PrestationsPage: React.FC = () => {
           comparison = getPrestationTotal(a) - getPrestationTotal(b);
           break;
         case 'service':
-          comparison = a.serviceName.localeCompare(b.serviceName);
+          comparison = a.serviceCategory.localeCompare(b.serviceCategory);
           break;
       }
       
@@ -221,7 +221,7 @@ const PrestationsPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {prestation.serviceName}
+                      {prestation.serviceCategory}
                     </h3>
                   </div>
                   

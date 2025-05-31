@@ -184,6 +184,10 @@ const TimeChart: React.FC = () => {
               'Blanchiment dentaire': 0,
               'Soins': 0,
               'Lissages': 0,
+              'Divers': 0,
+              'Formation ongles': 0,
+              'Formation spray tan': 0,
+              'Formation soin-lissage': 0,
             },
             prestationsCash: {
               'Manucure': 0,
@@ -192,6 +196,10 @@ const TimeChart: React.FC = () => {
               'Blanchiment dentaire': 0,
               'Soins': 0,
               'Lissages': 0,
+              'Divers': 0,
+              'Formation ongles': 0,
+              'Formation spray tan': 0,
+              'Formation soin-lissage': 0,
             },
             prestationsCard: {
               'Manucure': 0,
@@ -200,6 +208,10 @@ const TimeChart: React.FC = () => {
               'Blanchiment dentaire': 0,
               'Soins': 0,
               'Lissages': 0,
+              'Divers': 0,
+              'Formation ongles': 0,
+              'Formation spray tan': 0,
+              'Formation soin-lissage': 0,
             },
             expenses: {
               'Fournisseur ongle': 0,
@@ -207,6 +219,9 @@ const TimeChart: React.FC = () => {
               'Fournisseur spray tan': 0,
               'Fournisseur blanchiment': 0,
               'Aménagement du salon': 0,
+              'Formation ongles': 0,
+              'Formation spray tan': 0,
+              'Formation soin-lissage': 0,
               'Divers': 0,
             },
             expensesCash: {
@@ -215,6 +230,9 @@ const TimeChart: React.FC = () => {
               'Fournisseur spray tan': 0,
               'Fournisseur blanchiment': 0,
               'Aménagement du salon': 0,
+              'Formation ongles': 0,
+              'Formation spray tan': 0,
+              'Formation soin-lissage': 0,
               'Divers': 0,
             },
             expensesCard: {
@@ -223,6 +241,9 @@ const TimeChart: React.FC = () => {
               'Fournisseur spray tan': 0,
               'Fournisseur blanchiment': 0,
               'Aménagement du salon': 0,
+              'Formation ongles': 0,
+              'Formation spray tan': 0,
+              'Formation soin-lissage': 0,
               'Divers': 0,
             },
             totalRevenue: 0,
@@ -290,6 +311,10 @@ const TimeChart: React.FC = () => {
           'Blanchiment dentaire': 'rgba(6, 182, 212, 0.8)',
           'Soins': 'rgba(16, 185, 129, 0.8)',
           'Lissages': 'rgba(139, 92, 246, 0.8)',
+          'Divers': 'rgba(156, 163, 175, 0.8)',
+          'Formation ongles': 'rgba(244, 63, 94, 0.8)',
+          'Formation spray tan': 'rgba(251, 191, 36, 0.8)',
+          'Formation soin-lissage': 'rgba(34, 197, 94, 0.8)',
         };
 
         // Couleurs pour les dépenses (palette diversifiée)
@@ -299,6 +324,9 @@ const TimeChart: React.FC = () => {
           'Fournisseur spray tan': 'rgba(245, 158, 11, 0.8)', // Ambre
           'Fournisseur blanchiment': 'rgba(59, 130, 246, 0.8)', // Bleu
           'Aménagement du salon': 'rgba(156, 163, 175, 0.8)', // Gris
+          'Formation ongles': 'rgba(220, 38, 127, 0.8)',      // Rose foncé
+          'Formation spray tan': 'rgba(217, 119, 6, 0.8)',    // Orange foncé
+          'Formation soin-lissage': 'rgba(22, 163, 74, 0.8)', // Vert
           'Divers': 'rgba(107, 114, 128, 0.8)',              // Gris foncé
         };
 
@@ -537,8 +565,8 @@ const TimeChart: React.FC = () => {
   }), [timeData, timeUnit, isMobile, paymentFilter]);
 
   // Créer les légendes séparées
-  const prestationCategories = ['Manucure', 'Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins', 'Lissages'];
-  const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Divers'];
+  const prestationCategories = ['Manucure', 'Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins', 'Lissages', 'Divers', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage'];
+  const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage', 'Divers'];
 
   const prestationColors = {
     'Manucure': '#ec4899',
@@ -547,6 +575,10 @@ const TimeChart: React.FC = () => {
     'Blanchiment dentaire': '#06b6d4',
     'Soins': '#10b981',
     'Lissages': '#8b5cf6',
+    'Divers': '#9ca3af',
+    'Formation ongles': '#f43f5e',
+    'Formation spray tan': '#fbbf24',
+    'Formation soin-lissage': '#22c55e',
   };
 
   const expenseColors = {
@@ -555,6 +587,9 @@ const TimeChart: React.FC = () => {
     'Fournisseur spray tan': '#f59e0b', // Ambre
     'Fournisseur blanchiment': '#3b82f6', // Bleu
     'Aménagement du salon': '#9ca3af',  // Gris
+    'Formation ongles': '#e41e7a',      // Rose foncé
+    'Formation spray tan': '#f5650a',    // Orange foncé
+    'Formation soin-lissage': '#25c2a0', // Vert
     'Divers': '#6b7280',               // Gris foncé
   };
 
