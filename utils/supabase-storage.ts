@@ -13,17 +13,29 @@ const dbPrestationToPrestation = (dbPrestation: DatabasePrestation): Prestation 
   cardAmount: dbPrestation.card_amount
 })
 
-const dbExpenseToExpense = (dbExpense: DatabaseExpense): Expense => ({
-  id: dbExpense.id,
-  categoryId: dbExpense.category_id,
-  categoryName: dbExpense.category_name,
-  amount: dbExpense.amount, // Keep for backward compatibility
-  date: dbExpense.date,
-  description: dbExpense.description,
-  paymentMethod: (dbExpense.payment_method || 'cash') as PaymentMethod, // Default to cash for old records
-  cashAmount: dbExpense.cash_amount || dbExpense.amount || 0, // Fallback for old data
-  cardAmount: dbExpense.card_amount || 0
-})
+const dbExpenseToExpense = (dbExpense: DatabaseExpense): Expense => {
+  // Determine method with safe default for old records
+  const method = (dbExpense.payment_method || 'cash') as PaymentMethod
+
+  // Use nullish coalescing to avoid treating 0 as falsy
+  // If amounts are missing (old schema), fall back to `amount` based on payment method only
+  const cashAmount =
+    dbExpense.cash_amount ?? (method === 'cash' ? (dbExpense.amount ?? 0) : 0)
+  const cardAmount =
+    dbExpense.card_amount ?? (method === 'card' ? (dbExpense.amount ?? 0) : 0)
+
+  return {
+    id: dbExpense.id,
+    categoryId: dbExpense.category_id,
+    categoryName: dbExpense.category_name,
+    amount: dbExpense.amount, // Keep for backward compatibility
+    date: dbExpense.date,
+    description: dbExpense.description,
+    paymentMethod: method,
+    cashAmount,
+    cardAmount
+  }
+}
 
 // Convert app format to database format
 const prestationToDbPrestation = (prestation: Prestation, userEmail: string): Omit<DatabasePrestation, 'id' | 'created_at' | 'updated_at'> => ({
