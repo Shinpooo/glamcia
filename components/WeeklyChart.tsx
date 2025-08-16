@@ -224,6 +224,7 @@ const TimeChart: React.FC = () => {
               'Formation soin-lissage': 0,
               'Formation blanchiment dentaire': 0,
               'Produits': 0,
+              'Abonnements': 0,
               'Divers': 0,
             },
             expensesCash: {
@@ -237,6 +238,7 @@ const TimeChart: React.FC = () => {
               'Formation soin-lissage': 0,
               'Formation blanchiment dentaire': 0,
               'Produits': 0,
+              'Abonnements': 0,
               'Divers': 0,
             },
             expensesCard: {
@@ -250,6 +252,7 @@ const TimeChart: React.FC = () => {
               'Formation soin-lissage': 0,
               'Formation blanchiment dentaire': 0,
               'Produits': 0,
+              'Abonnements': 0,
               'Divers': 0,
             },
             totalRevenue: 0,
@@ -337,6 +340,7 @@ const TimeChart: React.FC = () => {
           'Formation soin-lissage (dépense)': 'rgba(22, 163, 74, 0.8)', // Vert
           'Formation blanchiment dentaire (dépense)': 'rgba(37, 99, 235, 0.8)', // Bleu indigo
           'Produits (achat)': 'rgba(234, 88, 12, 0.8)',              // Orange
+          'Abonnements': 'rgba(139, 92, 246, 0.8)',                  // Violet
           'Divers (dépense)': 'rgba(107, 114, 128, 0.8)',              // Gris foncé
         };
 
@@ -626,7 +630,7 @@ const TimeChart: React.FC = () => {
 
   // Créer les légendes séparées avec distinction prestations/dépenses
   const prestationCategories = ['Manucure & Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins & Lissages', 'Produits (vente)', 'Divers (prestation)', 'Formation ongles (prestation)', 'Formation spray tan (prestation)', 'Formation soin-lissage (prestation)', 'Formation blanchiment dentaire (prestation)'];
-  const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Formation ongles (dépense)', 'Formation spray tan (dépense)', 'Formation soin-lissage (dépense)', 'Formation blanchiment dentaire (dépense)', 'Produits (achat)', 'Divers (dépense)'];
+  const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Formation ongles (dépense)', 'Formation spray tan (dépense)', 'Formation soin-lissage (dépense)', 'Formation blanchiment dentaire (dépense)', 'Produits (achat)', 'Abonnements', 'Divers (dépense)'];
 
   const prestationColors = {
     'Manucure & Pédicure': '#ec4899',
@@ -652,6 +656,7 @@ const TimeChart: React.FC = () => {
     'Formation soin-lissage (dépense)': '#25c2a0', // Vert
     'Formation blanchiment dentaire (dépense)': '#2563eb', // Bleu indigo
     'Produits (achat)': '#ea580c',              // Orange
+    'Abonnements': '#8b5cf6',                   // Violet
     'Divers (dépense)': '#6b7280',               // Gris foncé
   };
 

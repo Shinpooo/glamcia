@@ -42,6 +42,10 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
     name: 'Produits'
   },
   {
+    id: 'abonnements',
+    name: 'Abonnements'
+  },
+  {
     id: 'divers',
     name: 'Divers'
   }
