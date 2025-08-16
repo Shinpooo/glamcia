@@ -4,10 +4,12 @@ export const SERVICE_CATEGORIES: string[] = [
   'Spray-Tanning',
   'Blanchiment dentaire',
   'Soins & Lissages',
+  'Produits',
   'Divers',
   'Formation ongles',
   'Formation spray tan',
-  'Formation soin-lissage'
+  'Formation soin-lissage',
+  'Formation blanchiment dentaire'
 ];
 
 export const getServiceCategories = (): string[] => {

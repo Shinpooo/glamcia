@@ -34,6 +34,14 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
     name: 'Formation soin-lissage'
   },
   {
+    id: 'formation-blanchiment-dentaire',
+    name: 'Formation blanchiment dentaire'
+  },
+  {
+    id: 'produits',
+    name: 'Produits'
+  },
+  {
     id: 'divers',
     name: 'Divers'
   }

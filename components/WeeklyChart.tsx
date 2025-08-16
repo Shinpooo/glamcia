@@ -182,30 +182,36 @@ const TimeChart: React.FC = () => {
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
               'Soins & Lissages': 0,
+              'Produits': 0,
               'Divers': 0,
               'Formation ongles': 0,
               'Formation spray tan': 0,
               'Formation soin-lissage': 0,
+              'Formation blanchiment dentaire': 0,
             },
             prestationsCash: {
               'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
               'Soins & Lissages': 0,
+              'Produits': 0,
               'Divers': 0,
               'Formation ongles': 0,
               'Formation spray tan': 0,
               'Formation soin-lissage': 0,
+              'Formation blanchiment dentaire': 0,
             },
             prestationsCard: {
               'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
               'Soins & Lissages': 0,
+              'Produits': 0,
               'Divers': 0,
               'Formation ongles': 0,
               'Formation spray tan': 0,
               'Formation soin-lissage': 0,
+              'Formation blanchiment dentaire': 0,
             },
             expenses: {
               'Fournisseur ongle': 0,
@@ -216,6 +222,8 @@ const TimeChart: React.FC = () => {
               'Formation ongles': 0,
               'Formation spray tan': 0,
               'Formation soin-lissage': 0,
+              'Formation blanchiment dentaire': 0,
+              'Produits': 0,
               'Divers': 0,
             },
             expensesCash: {
@@ -227,6 +235,8 @@ const TimeChart: React.FC = () => {
               'Formation ongles': 0,
               'Formation spray tan': 0,
               'Formation soin-lissage': 0,
+              'Formation blanchiment dentaire': 0,
+              'Produits': 0,
               'Divers': 0,
             },
             expensesCard: {
@@ -238,6 +248,8 @@ const TimeChart: React.FC = () => {
               'Formation ongles': 0,
               'Formation spray tan': 0,
               'Formation soin-lissage': 0,
+              'Formation blanchiment dentaire': 0,
+              'Produits': 0,
               'Divers': 0,
             },
             totalRevenue: 0,
@@ -257,15 +269,7 @@ const TimeChart: React.FC = () => {
             if (isWithinInterval(prestationDate, { start: intervalStart, end: intervalEnd })) {
               const total = getPrestationTotal(prestation);
               
-              // Fusionner Manucure et Pédicure en "Manucure & Pédicure"
-              // Fusionner Soins et Lissages en "Soins & Lissages"
-              let category = prestation.serviceCategory;
-              if (category === 'Manucure' || category === 'Pédicure') {
-                category = 'Manucure & Pédicure';
-              } else if (category === 'Soins' || category === 'Lissages') {
-                category = 'Soins & Lissages';
-              }
-              
+              const category = prestation.serviceCategory;
               timeDataItem.prestations[category] += total;
               timeDataItem.totalRevenue += total;
               
@@ -313,10 +317,12 @@ const TimeChart: React.FC = () => {
           'Spray-Tanning': 'rgba(234, 179, 8, 0.8)',
           'Blanchiment dentaire': 'rgba(6, 182, 212, 0.8)',
           'Soins & Lissages': 'rgba(16, 185, 129, 0.8)',
-          'Divers': 'rgba(156, 163, 175, 0.8)',
-          'Formation ongles': 'rgba(244, 63, 94, 0.8)',
-          'Formation spray tan': 'rgba(251, 191, 36, 0.8)',
-          'Formation soin-lissage': 'rgba(34, 197, 94, 0.8)',
+          'Produits (vente)': 'rgba(249, 115, 22, 0.8)',
+          'Divers (prestation)': 'rgba(156, 163, 175, 0.8)',
+          'Formation ongles (prestation)': 'rgba(244, 63, 94, 0.8)',
+          'Formation spray tan (prestation)': 'rgba(251, 191, 36, 0.8)',
+          'Formation soin-lissage (prestation)': 'rgba(34, 197, 94, 0.8)',
+          'Formation blanchiment dentaire (prestation)': 'rgba(14, 165, 233, 0.8)',
         };
 
         // Couleurs pour les dépenses (palette diversifiée)
@@ -326,10 +332,12 @@ const TimeChart: React.FC = () => {
           'Fournisseur spray tan': 'rgba(245, 158, 11, 0.8)', // Ambre
           'Fournisseur blanchiment': 'rgba(59, 130, 246, 0.8)', // Bleu
           'Aménagement du salon': 'rgba(156, 163, 175, 0.8)', // Gris
-          'Formation ongles': 'rgba(220, 38, 127, 0.8)',      // Rose foncé
-          'Formation spray tan': 'rgba(217, 119, 6, 0.8)',    // Orange foncé
-          'Formation soin-lissage': 'rgba(22, 163, 74, 0.8)', // Vert
-          'Divers': 'rgba(107, 114, 128, 0.8)',              // Gris foncé
+          'Formation ongles (dépense)': 'rgba(220, 38, 127, 0.8)',      // Rose foncé
+          'Formation spray tan (dépense)': 'rgba(217, 119, 6, 0.8)',    // Orange foncé
+          'Formation soin-lissage (dépense)': 'rgba(22, 163, 74, 0.8)', // Vert
+          'Formation blanchiment dentaire (dépense)': 'rgba(37, 99, 235, 0.8)', // Bleu indigo
+          'Produits (achat)': 'rgba(234, 88, 12, 0.8)',              // Orange
+          'Divers (dépense)': 'rgba(107, 114, 128, 0.8)',              // Gris foncé
         };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -342,15 +350,33 @@ const TimeChart: React.FC = () => {
           ? newTimeData.map(data => data.prestationsCard)
           : newTimeData.map(data => data.prestations);
 
-        Object.keys(prestationColors).forEach(category => {
-          datasets.push({
-            label: category,
-            data: prestationData.map(data => data[category] || 0),
-            backgroundColor: prestationColors[category as keyof typeof prestationColors],
-            borderColor: prestationColors[category as keyof typeof prestationColors].replace('0.8', '1'),
-            borderWidth: 1,
-            stack: 'revenue',
-          });
+        // Mapping des noms affichés vers les noms de données
+        const prestationMapping: { [key: string]: string } = {
+          'Produits (vente)': 'Produits',
+          'Divers (prestation)': 'Divers',
+          'Formation ongles (prestation)': 'Formation ongles',
+          'Formation spray tan (prestation)': 'Formation spray tan',
+          'Formation soin-lissage (prestation)': 'Formation soin-lissage',
+          'Formation blanchiment dentaire (prestation)': 'Formation blanchiment dentaire',
+        };
+
+        Object.keys(prestationColors).forEach(displayCategory => {
+          const dataCategory = prestationMapping[displayCategory] || displayCategory;
+          const categoryData = prestationData.map(data => data[dataCategory] || 0);
+          
+          // Ne pas afficher la catégorie si toutes les valeurs sont nulles
+          const hasNonZeroValue = categoryData.some(value => value !== 0);
+          
+          if (hasNonZeroValue) {
+            datasets.push({
+              label: displayCategory,
+              data: categoryData,
+              backgroundColor: prestationColors[displayCategory as keyof typeof prestationColors],
+              borderColor: prestationColors[displayCategory as keyof typeof prestationColors].replace('0.8', '1'),
+              borderWidth: 1,
+              stack: 'revenue',
+            });
+          }
         });
 
         // Datasets pour les dépenses (valeurs négatives) - selon le filtre de paiement
@@ -360,15 +386,37 @@ const TimeChart: React.FC = () => {
           ? newTimeData.map(data => data.expensesCard)
           : newTimeData.map(data => data.expenses);
 
-        Object.keys(expenseColors).forEach(category => {
-          datasets.push({
-            label: category,
-            data: expenseData.map(data => -(data[category] || 0)),
-            backgroundColor: expenseColors[category as keyof typeof expenseColors],
-            borderColor: expenseColors[category as keyof typeof expenseColors].replace('0.8', '1'),
-            borderWidth: 1,
-            stack: 'expenses',
+        // Mapping des noms affichés vers les noms de données
+        const expenseMapping: { [key: string]: string } = {
+          'Formation ongles (dépense)': 'Formation ongles',
+          'Formation spray tan (dépense)': 'Formation spray tan',
+          'Formation soin-lissage (dépense)': 'Formation soin-lissage',
+          'Formation blanchiment dentaire (dépense)': 'Formation blanchiment dentaire',
+          'Produits (achat)': 'Produits',
+          'Divers (dépense)': 'Divers',
+        };
+
+        Object.keys(expenseColors).forEach(displayCategory => {
+          const dataCategory = expenseMapping[displayCategory] || displayCategory;
+          const categoryData = expenseData.map(data => {
+            const value = data[dataCategory] || 0;
+            // Éviter -0 en retournant 0 si la valeur est 0
+            return value === 0 ? 0 : -value;
           });
+          
+          // Ne pas afficher la catégorie si toutes les valeurs sont nulles
+          const hasNonZeroValue = categoryData.some(value => value !== 0);
+          
+          if (hasNonZeroValue) {
+            datasets.push({
+              label: displayCategory,
+              data: categoryData,
+              backgroundColor: expenseColors[displayCategory as keyof typeof expenseColors],
+              borderColor: expenseColors[displayCategory as keyof typeof expenseColors].replace('0.8', '1'),
+              borderWidth: 1,
+              stack: 'expenses',
+            });
+          }
         });
 
         // Dataset pour la ligne de profit - selon le filtre de paiement
@@ -430,6 +478,14 @@ const TimeChart: React.FC = () => {
       tooltip: {
         enabled: true,
         external: undefined, // Use default tooltip
+        filter: (tooltipItem) => {
+          // Toujours afficher la ligne de profit
+          if (tooltipItem.dataset.label === 'Évolution du profit') {
+            return true;
+          }
+          // Masquer les éléments avec une valeur de 0
+          return Math.abs(tooltipItem.parsed.y) !== 0;
+        },
         callbacks: {
           title: (context) => {
             const periodIndex = context[0].dataIndex;
@@ -464,12 +520,14 @@ const TimeChart: React.FC = () => {
             ];
           },
           label: (context) => {
+            // Affichage spécial pour la ligne de profit
             if (context.dataset.label === 'Évolution du profit') {
               const value = context.parsed.y;
               return `Évolution du profit: ${value >= 0 ? '+' : ''}${value}€`;
             }
+            
+            // Pour les prestations et dépenses (les valeurs à 0 sont déjà filtrées)
             const value = Math.abs(context.parsed.y);
-            if (value === 0) return;
             return `${context.dataset.label}: ${context.parsed.y < 0 ? '-' : '+'}${value}€`;
           },
           labelColor: (context) => {
@@ -566,19 +624,21 @@ const TimeChart: React.FC = () => {
     },
   }), [timeData, timeUnit, isMobile, paymentFilter]);
 
-  // Créer les légendes séparées
-  const prestationCategories = ['Manucure & Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins & Lissages', 'Divers', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage'];
-  const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage', 'Divers'];
+  // Créer les légendes séparées avec distinction prestations/dépenses
+  const prestationCategories = ['Manucure & Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins & Lissages', 'Produits (vente)', 'Divers (prestation)', 'Formation ongles (prestation)', 'Formation spray tan (prestation)', 'Formation soin-lissage (prestation)', 'Formation blanchiment dentaire (prestation)'];
+  const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Formation ongles (dépense)', 'Formation spray tan (dépense)', 'Formation soin-lissage (dépense)', 'Formation blanchiment dentaire (dépense)', 'Produits (achat)', 'Divers (dépense)'];
 
   const prestationColors = {
     'Manucure & Pédicure': '#ec4899',
     'Spray-Tanning': '#eab308',
     'Blanchiment dentaire': '#06b6d4',
     'Soins & Lissages': '#10b981',
-    'Divers': '#9ca3af',
-    'Formation ongles': '#f43f5e',
-    'Formation spray tan': '#fbbf24',
-    'Formation soin-lissage': '#22c55e',
+    'Produits (vente)': '#f97316',
+    'Divers (prestation)': '#9ca3af',
+    'Formation ongles (prestation)': '#f43f5e',
+    'Formation spray tan (prestation)': '#fbbf24',
+    'Formation soin-lissage (prestation)': '#22c55e',
+    'Formation blanchiment dentaire (prestation)': '#0ea5e9',
   };
 
   const expenseColors = {
@@ -587,10 +647,12 @@ const TimeChart: React.FC = () => {
     'Fournisseur spray tan': '#f59e0b', // Ambre
     'Fournisseur blanchiment': '#3b82f6', // Bleu
     'Aménagement du salon': '#9ca3af',  // Gris
-    'Formation ongles': '#e41e7a',      // Rose foncé
-    'Formation spray tan': '#f5650a',    // Orange foncé
-    'Formation soin-lissage': '#25c2a0', // Vert
-    'Divers': '#6b7280',               // Gris foncé
+    'Formation ongles (dépense)': '#e41e7a',      // Rose foncé
+    'Formation spray tan (dépense)': '#f5650a',    // Orange foncé
+    'Formation soin-lissage (dépense)': '#25c2a0', // Vert
+    'Formation blanchiment dentaire (dépense)': '#2563eb', // Bleu indigo
+    'Produits (achat)': '#ea580c',              // Orange
+    'Divers (dépense)': '#6b7280',               // Gris foncé
   };
 
   const getPaymentFilterConfig = (filter: PaymentFilter) => {
