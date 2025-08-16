@@ -1,7 +1,6 @@
 // Liste des catégories de services
 export const SERVICE_CATEGORIES: string[] = [
-  'Manucure',
-  'Pédicure', 
+  'Manucure & Pédicure',
   'Spray-Tanning',
   'Blanchiment dentaire',
   'Soins',

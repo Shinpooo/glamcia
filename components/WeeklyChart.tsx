@@ -178,8 +178,7 @@ const TimeChart: React.FC = () => {
             period: format(intervalStart, 'yyyy-MM-dd'),
             periodLabel,
             prestations: {
-              'Manucure': 0,
-              'Pédicure': 0,
+              'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
               'Soins': 0,
@@ -190,8 +189,7 @@ const TimeChart: React.FC = () => {
               'Formation soin-lissage': 0,
             },
             prestationsCash: {
-              'Manucure': 0,
-              'Pédicure': 0,
+              'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
               'Soins': 0,
@@ -202,8 +200,7 @@ const TimeChart: React.FC = () => {
               'Formation soin-lissage': 0,
             },
             prestationsCard: {
-              'Manucure': 0,
-              'Pédicure': 0,
+              'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
               'Soins': 0,
@@ -262,14 +259,20 @@ const TimeChart: React.FC = () => {
             const prestationDate = parseISO(prestation.date);
             if (isWithinInterval(prestationDate, { start: intervalStart, end: intervalEnd })) {
               const total = getPrestationTotal(prestation);
-              timeDataItem.prestations[prestation.serviceCategory] += total;
+              
+              // Fusionner Manucure et Pédicure en "Manucure & Pédicure"
+              const category = (prestation.serviceCategory === 'Manucure' || prestation.serviceCategory === 'Pédicure') 
+                ? 'Manucure & Pédicure' 
+                : prestation.serviceCategory;
+              
+              timeDataItem.prestations[category] += total;
               timeDataItem.totalRevenue += total;
               
               // Ajouter les montants cash et card séparément
-              timeDataItem.prestationsCash[prestation.serviceCategory] += prestation.cashAmount;
+              timeDataItem.prestationsCash[category] += prestation.cashAmount;
               timeDataItem.totalCashRevenue += prestation.cashAmount;
               
-              timeDataItem.prestationsCard[prestation.serviceCategory] += prestation.cardAmount;
+              timeDataItem.prestationsCard[category] += prestation.cardAmount;
               timeDataItem.totalCardRevenue += prestation.cardAmount;
             }
           });
@@ -305,8 +308,7 @@ const TimeChart: React.FC = () => {
         
         // Couleurs pour les prestations (tons chauds)
         const prestationColors = {
-          'Manucure': 'rgba(236, 72, 153, 0.8)',
-          'Pédicure': 'rgba(249, 115, 22, 0.8)',
+          'Manucure & Pédicure': 'rgba(236, 72, 153, 0.8)',
           'Spray-Tanning': 'rgba(234, 179, 8, 0.8)',
           'Blanchiment dentaire': 'rgba(6, 182, 212, 0.8)',
           'Soins': 'rgba(16, 185, 129, 0.8)',
@@ -565,12 +567,11 @@ const TimeChart: React.FC = () => {
   }), [timeData, timeUnit, isMobile, paymentFilter]);
 
   // Créer les légendes séparées
-  const prestationCategories = ['Manucure', 'Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins', 'Lissages', 'Divers', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage'];
+  const prestationCategories = ['Manucure & Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins', 'Lissages', 'Divers', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage'];
   const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage', 'Divers'];
 
   const prestationColors = {
-    'Manucure': '#ec4899',
-    'Pédicure': '#f97316',
+    'Manucure & Pédicure': '#ec4899',
     'Spray-Tanning': '#eab308',
     'Blanchiment dentaire': '#06b6d4',
     'Soins': '#10b981',
