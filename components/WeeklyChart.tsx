@@ -181,8 +181,7 @@ const TimeChart: React.FC = () => {
               'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
-              'Soins': 0,
-              'Lissages': 0,
+              'Soins & Lissages': 0,
               'Divers': 0,
               'Formation ongles': 0,
               'Formation spray tan': 0,
@@ -192,8 +191,7 @@ const TimeChart: React.FC = () => {
               'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
-              'Soins': 0,
-              'Lissages': 0,
+              'Soins & Lissages': 0,
               'Divers': 0,
               'Formation ongles': 0,
               'Formation spray tan': 0,
@@ -203,8 +201,7 @@ const TimeChart: React.FC = () => {
               'Manucure & Pédicure': 0,
               'Spray-Tanning': 0,
               'Blanchiment dentaire': 0,
-              'Soins': 0,
-              'Lissages': 0,
+              'Soins & Lissages': 0,
               'Divers': 0,
               'Formation ongles': 0,
               'Formation spray tan': 0,
@@ -261,9 +258,13 @@ const TimeChart: React.FC = () => {
               const total = getPrestationTotal(prestation);
               
               // Fusionner Manucure et Pédicure en "Manucure & Pédicure"
-              const category = (prestation.serviceCategory === 'Manucure' || prestation.serviceCategory === 'Pédicure') 
-                ? 'Manucure & Pédicure' 
-                : prestation.serviceCategory;
+              // Fusionner Soins et Lissages en "Soins & Lissages"
+              let category = prestation.serviceCategory;
+              if (category === 'Manucure' || category === 'Pédicure') {
+                category = 'Manucure & Pédicure';
+              } else if (category === 'Soins' || category === 'Lissages') {
+                category = 'Soins & Lissages';
+              }
               
               timeDataItem.prestations[category] += total;
               timeDataItem.totalRevenue += total;
@@ -311,8 +312,7 @@ const TimeChart: React.FC = () => {
           'Manucure & Pédicure': 'rgba(236, 72, 153, 0.8)',
           'Spray-Tanning': 'rgba(234, 179, 8, 0.8)',
           'Blanchiment dentaire': 'rgba(6, 182, 212, 0.8)',
-          'Soins': 'rgba(16, 185, 129, 0.8)',
-          'Lissages': 'rgba(139, 92, 246, 0.8)',
+          'Soins & Lissages': 'rgba(16, 185, 129, 0.8)',
           'Divers': 'rgba(156, 163, 175, 0.8)',
           'Formation ongles': 'rgba(244, 63, 94, 0.8)',
           'Formation spray tan': 'rgba(251, 191, 36, 0.8)',
@@ -567,15 +567,14 @@ const TimeChart: React.FC = () => {
   }), [timeData, timeUnit, isMobile, paymentFilter]);
 
   // Créer les légendes séparées
-  const prestationCategories = ['Manucure & Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins', 'Lissages', 'Divers', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage'];
+  const prestationCategories = ['Manucure & Pédicure', 'Spray-Tanning', 'Blanchiment dentaire', 'Soins & Lissages', 'Divers', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage'];
   const expenseCategories = ['Fournisseur ongle', 'Fournisseur cheveux', 'Fournisseur spray tan', 'Fournisseur blanchiment', 'Aménagement du salon', 'Formation ongles', 'Formation spray tan', 'Formation soin-lissage', 'Divers'];
 
   const prestationColors = {
     'Manucure & Pédicure': '#ec4899',
     'Spray-Tanning': '#eab308',
     'Blanchiment dentaire': '#06b6d4',
-    'Soins': '#10b981',
-    'Lissages': '#8b5cf6',
+    'Soins & Lissages': '#10b981',
     'Divers': '#9ca3af',
     'Formation ongles': '#f43f5e',
     'Formation spray tan': '#fbbf24',
